@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC -shared  -o example.cpython-312-x86_64-linux-gnu.so CMakeFiles/example.dir/bindings.cpp.o CMakeFiles/example.dir/example.c.o 

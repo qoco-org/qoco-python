@@ -1,0 +1,18 @@
+Performing C++ SOURCE FILE Test HAS_FLTO_THIN failed with the following output:
+Change Dir: /home/govind/Desktop/git/pybind-test/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_4ad98/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_4ad98.dir/build.make CMakeFiles/cmTC_4ad98.dir/build
+gmake[1]: Entering directory '/home/govind/Desktop/git/pybind-test/build/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_4ad98.dir/src.cxx.o
+/usr/bin/c++ -DHAS_FLTO_THIN  -flto -MD -MT CMakeFiles/cmTC_4ad98.dir/src.cxx.o -MF CMakeFiles/cmTC_4ad98.dir/src.cxx.o.d -o CMakeFiles/cmTC_4ad98.dir/src.cxx.o -c /home/govind/Desktop/git/pybind-test/build/CMakeFiles/CMakeTmp/src.cxx
+Linking CXX executable cmTC_4ad98
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_4ad98.dir/link.txt --verbose=1
+/usr/bin/c++ CMakeFiles/cmTC_4ad98.dir/src.cxx.o -o cmTC_4ad98  -flto= 
+clang: error: unsupported argument '' to option 'flto='
+gmake[1]: *** [CMakeFiles/cmTC_4ad98.dir/build.make:100: cmTC_4ad98] Error 1
+gmake[1]: Leaving directory '/home/govind/Desktop/git/pybind-test/build/CMakeFiles/CMakeTmp'
+gmake: *** [Makefile:127: cmTC_4ad98/fast] Error 2
+
+
+Source file was:
+int main() { return 0; }
