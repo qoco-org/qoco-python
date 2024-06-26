@@ -29,13 +29,13 @@ class CMakeExtension(Extension):
         self.sourcedir = os.path.abspath(sourcedir)
 
 setup(
-    name='thing',
+    name='qcos',
     version='0.1.0',
-    author='Your Name',
-    author_email='your.email@example.com',
-    description='A minimal example package with pybind11 and CMake',
+    author='Govind Chari',
+    author_email='govindchari1@gmail.com',
+    description='QCOS: Quadratic Objective Conic Optimization Solver',
     long_description=open('README.md').read(),
-    ext_modules=[CMakeExtension('thing', sourcedir='src')],
+    ext_modules=[CMakeExtension('qcos', sourcedir='src')],
     cmdclass={'build_ext': CMakeBuildExt},
     zip_safe=False,
 )

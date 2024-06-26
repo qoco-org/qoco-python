@@ -1,3 +1,3 @@
-import thing
+import qcos_ext
 
-thing.say_hello()
+qcos_ext.say_hello()
