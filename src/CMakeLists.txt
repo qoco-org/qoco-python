@@ -18,5 +18,5 @@ list(POP_BACK CMAKE_MESSAGE_INDENT)
 FetchContent_MakeAvailable(qcos)
 
 add_library(qcos_ext MODULE bindings.cpp example.c)
-target_link_libraries(qcos_ext PRIVATE pybind11::module)
+target_link_libraries(qcos_ext PRIVATE pybind11::module qcos)
 set_target_properties(qcos_ext PROPERTIES PREFIX "${PYTHON_MODULE_PREFIX}" SUFFIX "${PYTHON_MODULE_EXTENSION}")
