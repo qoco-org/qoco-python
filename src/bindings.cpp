@@ -8,7 +8,7 @@ extern "C"
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(example, m)
+PYBIND11_MODULE(thing, m)
 {
     m.def("say_hello", &say_hello, "A function that prints 'Hello, World!'");
 }

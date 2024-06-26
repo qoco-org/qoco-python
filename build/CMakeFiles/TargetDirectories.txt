@@ -1,3 +1,0 @@
-/home/govind/Desktop/git/pybind-test/build/CMakeFiles/example.dir
-/home/govind/Desktop/git/pybind-test/build/CMakeFiles/edit_cache.dir
-/home/govind/Desktop/git/pybind-test/build/CMakeFiles/rebuild_cache.dir
