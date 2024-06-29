@@ -1,4 +1,5 @@
-import qcos_ext
+import importlib
+import numpy as np
 
 class QCOS:
     def __init__(self, *args, **kwargs):
@@ -15,4 +16,43 @@ class QCOS:
         self.nsoc = None
         self.q = None
 
-        # self.ext = importlib.import_module(qcos_ext)
+        self.ext = importlib.import_module('qcos_ext')
+        self._solver = None
+        self.ext.say_hello()
+
+    def setup(self, n, m, p, P, c, A, b, G, h, l, nsoc, q, **settings):
+        self.m = m
+        self.n = n
+        self.p = p
+        self.P = self.ext.CSC(P.astype(np.float64))
+        self.c = c.astype(np.float64)
+        self.A = self.ext.CSC(A.astype(np.float64))
+        self.b = b.astype(np.float64)
+        self.G = self.ext.CSC(G.astype(np.float64))
+        self.h = h.astype(np.float64)
+        self.l = l
+        self.nsoc = nsoc
+        self.q = q.astype(np.int32)
+        self.settings = self.ext.QCOSSettings()
+        self.ext.set_default_settings(self.settings)
+        self.update_settings(**settings)
+
+        self._solver = self.ext.QCOSSolver(
+            self.n,
+            self.m,
+            self.p,
+            self.P,
+            self.c,
+            self.A,
+            self.b,
+            self.G,
+            self.h,
+            self.l,
+            self.nsoc,
+            self.q,
+            self.settings
+        )
+
+    def solve(self):
+        self._solver.solve()
+        # Handle nonconvergence.

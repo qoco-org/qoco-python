@@ -37,5 +37,7 @@ setup(
     long_description=open('README.md').read(),
     ext_modules=[CMakeExtension('qcos', sourcedir='src')],
     cmdclass={'build_ext': CMakeBuildExt},
+    package_dir={'': 'src'},
+    packages=['qcos'],
     zip_safe=False,
 )

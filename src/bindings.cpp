@@ -225,6 +225,8 @@ PYBIND11_MODULE(qcos_ext, m)
         .def_readwrite("reg", &QCOSSettings::reg)
         .def_readwrite("verbose", &QCOSSettings::verbose);
 
+    m.def("set_default_settings", &set_default_settings);
+
     // Solution.
     py::class_<PyQCOSSolution>(m, "QCOSSolution", py::module_local())
         .def_property_readonly("x", &PyQCOSSolution::get_x)

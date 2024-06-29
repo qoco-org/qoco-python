@@ -1,9 +1,8 @@
 cmake_minimum_required(VERSION 3.12)
-project(qcos_ext)
+project(extension)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 11)
 
-# find_package(Python3 COMPONENTS Development REQUIRED)
 find_package(pybind11 REQUIRED)
 
 message(STATUS "Fetching/configuring QCOS")
@@ -12,7 +11,7 @@ include(FetchContent)
 FetchContent_Declare(
   qcos
   GIT_REPOSITORY https://github.com/govindchari/qcos.git
-  GIT_TAG d9b4b45d0dee7d7fb9e3159b8d6d80ae3f4fbc98
+  GIT_TAG ab31127bc307fb53db2e6f1afd5b9ba51cc091e0
 )
 list(POP_BACK CMAKE_MESSAGE_INDENT)
 FetchContent_MakeAvailable(qcos)

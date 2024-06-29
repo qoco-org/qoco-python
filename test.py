@@ -2,18 +2,33 @@ import qcos
 import numpy as np
 from scipy import sparse
 
-# qcos_ext.say_hello()
+# qcos.say_hello()
 
 if __name__ == '__main__':
     # Define problem data
-    P = sparse.csc_matrix([[4, 1], [1, 2]])
-    c = np.array([1, 1])
-    G = sparse.csc_matrix([[1, 1], [1, 0]])
-    h = np.array([1, 0.7])
-    l = 2
-    n = 2
-    m = 2
-    p = 1
+    P = sparse.diags([1,2,3,4,5,6], 0)
+    P = P.tocsc()
+
+    c = np.array([1,2,3,4,5,6])
+    G = -sparse.identity(6)
+    G = G.tocsc()
+    h = np.zeros(6)
+    A = sparse.csc_matrix([[1,1,0,0,0,0],[0,1,2,0,0,0]])
+    A = A.tocsc()
+    b = np.array([1, 2])
+
+    l = 3
+    n = 6
+    m = 6
+    p = 2
+    nsoc = 1
+    q = np.array([3])
 
     # Create an QCOS object
     prob = qcos.QCOS()
+
+    # Setup workspace and change alpha parameter
+    prob.setup(n, m, p, P, c, A, b, G, h, l, nsoc, q)
+
+    # Solve problem
+    res = prob.solve()
