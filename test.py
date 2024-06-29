@@ -2,8 +2,6 @@ import qcos
 import numpy as np
 from scipy import sparse
 
-# qcos.say_hello()
-
 if __name__ == '__main__':
     # Define problem data
     P = sparse.diags([1,2,3,4,5,6], 0)
@@ -24,11 +22,12 @@ if __name__ == '__main__':
     nsoc = 1
     q = np.array([3])
 
-    # Create an QCOS object
+    # Create an QCOS object.
     prob = qcos.QCOS()
 
-    # Setup workspace and change alpha parameter
+    # Setup workspace.
     prob.setup(n, m, p, P, c, A, b, G, h, l, nsoc, q)
 
-    # Solve problem
+    # Solve problem.
     res = prob.solve()
+    print(res)

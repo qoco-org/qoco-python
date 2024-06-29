@@ -1,5 +1,6 @@
 import importlib
 import numpy as np
+from types import SimpleNamespace
 
 class QCOS:
     def __init__(self, *args, **kwargs):
@@ -35,7 +36,8 @@ class QCOS:
         self.q = q.astype(np.int32)
         self.settings = self.ext.QCOSSettings()
         self.ext.set_default_settings(self.settings)
-        self.update_settings(**settings)
+        # self.update_settings(**settings)
+        breakpoint()
 
         self._solver = self.ext.QCOSSolver(
             self.n,
@@ -55,4 +57,8 @@ class QCOS:
 
     def solve(self):
         self._solver.solve()
+
+        results = SimpleNamespace(x=self._solver.solution.x, s=self._solver.solution.s, y=self._solver.solution.y, z=self._solver.solution.z)
+        return results
+
         # Handle nonconvergence.

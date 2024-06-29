@@ -1,5 +1,6 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
+#include <iostream>
 
 #include "qcos.h"
 
@@ -36,6 +37,10 @@ CSC::CSC(py::object A)
         A = spa.attr("csc_matrix")(A);
     }
 
+    this->_p = A.attr("indptr").cast<py::array_t<QCOSInt, py::array::c_style>>();
+    this->_i = A.attr("indices").cast<py::array_t<QCOSInt, py::array::c_style>>();
+    this->_x = A.attr("data").cast<py::array_t<QCOSFloat, py::array::c_style>>();
+
     this->_csc = new QCOSCscMatrix();
     this->_csc->m = m;
     this->_csc->n = n;
@@ -56,7 +61,7 @@ QCOSCscMatrix &CSC::getcsc() const
 
 CSC::~CSC()
 {
-    delete this->_csc;
+    // delete this->_csc;
 }
 
 class PyQCOSSolution
@@ -150,6 +155,15 @@ private:
 PyQCOSSolver::PyQCOSSolver(QCOSInt n, QCOSInt m, QCOSInt p, const CSC &P, const py::array_t<QCOSFloat> c, const CSC &A, const py::array_t<QCOSFloat> b, const CSC &G, const py::array_t<QCOSFloat> h, QCOSInt l, QCOSInt nsoc, const py::array_t<QCOSInt> q, QCOSSettings *settings) : n(n), m(m), p(p), _P(P), _c(c), _A(A), _b(b), _G(G), _h(h), l(l), nsoc(nsoc), _q(q)
 {
     this->_solver = new QCOSSolver();
+    std::cout << "hi" << std::endl;
+    print_qcos_csc_matrix(&this->_P.getcsc());
+    print_qcos_csc_matrix(&this->_A.getcsc());
+    print_qcos_csc_matrix(&this->_G.getcsc());
+    print_arrayf((QCOSFloat *)this->_c.data(), n);
+    print_arrayf((QCOSFloat *)this->_b.data(), p);
+    print_arrayf((QCOSFloat *)this->_h.data(), m);
+    print_arrayi((QCOSInt *)this->_q.data(), nsoc);
+
     QCOSInt status = qcos_setup(this->_solver, n, m, p, &this->_P.getcsc(), (QCOSFloat *)this->_c.data(), &this->_A.getcsc(), (QCOSFloat *)this->_b.data(), &this->_G.getcsc(), (QCOSFloat *)this->_h.data(), l, nsoc, (QCOSInt *)this->_q.data(), settings);
 
     if (status)
@@ -161,7 +175,7 @@ PyQCOSSolver::PyQCOSSolver(QCOSInt n, QCOSInt m, QCOSInt p, const CSC &P, const 
 
 PyQCOSSolver::~PyQCOSSolver()
 {
-    qcos_cleanup(this->_solver);
+    // qcos_cleanup(this->_solver);
 }
 
 QCOSSettings *PyQCOSSolver::get_settings()
