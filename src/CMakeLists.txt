@@ -11,11 +11,11 @@ include(FetchContent)
 FetchContent_Declare(
   qcos
   GIT_REPOSITORY https://github.com/govindchari/qcos.git
-  GIT_TAG ab31127bc307fb53db2e6f1afd5b9ba51cc091e0
+  GIT_TAG e8ba4a141acb3546e2795a5e8f68d4a5c4be585b
 )
 list(POP_BACK CMAKE_MESSAGE_INDENT)
 FetchContent_MakeAvailable(qcos)
 
-add_library(qcos_ext MODULE bindings.cpp example.c)
+add_library(qcos_ext MODULE bindings.cpp)
 target_link_libraries(qcos_ext PRIVATE pybind11::module qcos)
 set_target_properties(qcos_ext PROPERTIES PREFIX "${PYTHON_MODULE_PREFIX}" SUFFIX "${PYTHON_MODULE_EXTENSION}")

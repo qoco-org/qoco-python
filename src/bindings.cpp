@@ -61,7 +61,7 @@ QCOSCscMatrix &CSC::getcsc() const
 
 CSC::~CSC()
 {
-    // delete this->_csc;
+    delete this->_csc;
 }
 
 class PyQCOSSolution
@@ -125,7 +125,7 @@ public:
     QCOSSettings *get_settings();
     PyQCOSSolution &get_solution();
 
-    // QCOSInt update_settings(const QCOSSettings &);
+    QCOSInt update_settings(const QCOSSettings &);
     // QCOSInt update_vector_data(py::object, py::object, py::object);
     // QCOSInt update_matrix_data(py::object, py::object, py::object);
 
@@ -175,7 +175,7 @@ PyQCOSSolver::PyQCOSSolver(QCOSInt n, QCOSInt m, QCOSInt p, const CSC &P, const 
 
 PyQCOSSolver::~PyQCOSSolver()
 {
-    // qcos_cleanup(this->_solver);
+    qcos_cleanup(this->_solver);
 }
 
 QCOSSettings *PyQCOSSolver::get_settings()
@@ -197,15 +197,13 @@ QCOSInt PyQCOSSolver::solve()
     return status;
 }
 
-extern "C"
+QCOSInt PyQCOSSolver::update_settings(const QCOSSettings &new_settings)
 {
-    void say_hello();
+    return qcos_update_settings(this->_solver, &new_settings);
 }
 
 PYBIND11_MODULE(qcos_ext, m)
 {
-    m.def("say_hello", &say_hello, "A function that prints 'Hello, World!'");
-
     // Enums.
     py::enum_<qcos_solve_status>(m, "qcos_solve_status", py::module_local())
         .value("QCOS_UNSOLVED", QCOS_UNSOLVED)
@@ -252,6 +250,7 @@ PYBIND11_MODULE(qcos_ext, m)
     py::class_<PyQCOSSolver>(m, "QCOSSolver", py::module_local())
         .def(py::init<QCOSInt, QCOSInt, QCOSInt, const CSC &, const py::array_t<QCOSFloat>, const CSC &, const py::array_t<QCOSFloat>, const CSC &, const py::array_t<QCOSFloat>, QCOSInt, QCOSInt, const py::array_t<QCOSInt>, QCOSSettings *>(), "n"_a, "m"_a, "p"_a, "P"_a, "c"_a.noconvert(), "A"_a, "b"_a.noconvert(), "G"_a, "h"_a.noconvert(), "l"_a, "nsoc"_a, "q"_a.noconvert(), "settings"_a)
         .def_property_readonly("solution", &PyQCOSSolver::get_solution, py::return_value_policy::reference)
+        .def("update_settings", &PyQCOSSolver::update_settings)
         .def("solve", &PyQCOSSolver::solve)
         .def("get_settings", &PyQCOSSolver::get_settings, py::return_value_policy::reference);
 }

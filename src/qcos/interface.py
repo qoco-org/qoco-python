@@ -19,7 +19,20 @@ class QCOS:
 
         self.ext = importlib.import_module('qcos_ext')
         self._solver = None
-        self.ext.say_hello()
+
+    def update_settings(self, **kwargs):
+        assert self.settings is not None
+
+        settings_changed = False
+
+        for k in self.ext.QCOSSettings.__dict__:
+            if not k.startswith('__'):
+                if k in kwargs:
+                    setattr(self.settings, k, kwargs[k])
+                    settings_changed = True
+
+        if settings_changed and self._solver is not None:
+            self._solver.update_settings(self.settings)
 
     def setup(self, n, m, p, P, c, A, b, G, h, l, nsoc, q, **settings):
         self.m = m
@@ -36,8 +49,7 @@ class QCOS:
         self.q = q.astype(np.int32)
         self.settings = self.ext.QCOSSettings()
         self.ext.set_default_settings(self.settings)
-        # self.update_settings(**settings)
-        breakpoint()
+        self.update_settings(**settings)
 
         self._solver = self.ext.QCOSSolver(
             self.n,
