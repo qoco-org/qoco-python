@@ -3,6 +3,8 @@ project(extension)
 
 set(CMAKE_CXX_STANDARD 11)
 
+set(QCOS_BUILD_TYPE "Release")
+
 find_package(pybind11 REQUIRED)
 
 message(STATUS "Fetching/configuring QCOS")
@@ -11,7 +13,7 @@ include(FetchContent)
 FetchContent_Declare(
   qcos
   GIT_REPOSITORY https://github.com/govindchari/qcos.git
-  GIT_TAG e8ba4a141acb3546e2795a5e8f68d4a5c4be585b
+  GIT_TAG d64c53b7ae47f20ae665c127b11f7765b23686b3
 )
 list(POP_BACK CMAKE_MESSAGE_INDENT)
 FetchContent_MakeAvailable(qcos)

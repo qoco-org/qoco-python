@@ -1,5 +1,6 @@
 import importlib
 import numpy as np
+from scipy import sparse
 from types import SimpleNamespace
 
 class QCOS:
@@ -16,6 +17,8 @@ class QCOS:
         self.l = None
         self.nsoc = None
         self.q = None
+
+        self.solvecodes = ["QCOS_UNSOLVED", "QCOS_SOLVED", "QCOS_SOLVED_INACCURATE", "QCOS_MAX_ITER"]
 
         self.ext = importlib.import_module('qcos_ext')
         self._solver = None
@@ -38,7 +41,7 @@ class QCOS:
         self.m = m
         self.n = n
         self.p = p
-        self.P = self.ext.CSC(P.astype(np.float64))
+        self.P = self.ext.CSC(sparse.triu(P, format="csc").astype(np.float64))
         self.c = c.astype(np.float64)
         self.A = self.ext.CSC(A.astype(np.float64))
         self.b = b.astype(np.float64)
@@ -70,7 +73,7 @@ class QCOS:
     def solve(self):
         self._solver.solve()
 
-        results = SimpleNamespace(x=self._solver.solution.x, s=self._solver.solution.s, y=self._solver.solution.y, z=self._solver.solution.z)
+        results = SimpleNamespace(x=self._solver.solution.x, s=self._solver.solution.s, y=self._solver.solution.y, z=self._solver.solution.z, iters=self._solver.solution.iters, solve_time_sec=self._solver.solution.solve_time_sec, obj=self._solver.solution.obj, pres=self._solver.solution.pres, dres=self._solver.solution.dres, gap=self._solver.solution.gap, status=self.solvecodes[self._solver.solution.status])
         return results
 
         # Handle nonconvergence.

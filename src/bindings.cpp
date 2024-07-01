@@ -72,12 +72,12 @@ public:
     py::array_t<QCOSFloat> get_s();
     py::array_t<QCOSFloat> get_y();
     py::array_t<QCOSFloat> get_z();
+    QCOSSolution &_solution;
 
 private:
     QCOSInt _n;
     QCOSInt _m;
     QCOSInt _p;
-    QCOSSolution &_solution;
 };
 
 PyQCOSSolution::PyQCOSSolution(QCOSSolution &solution, QCOSInt n, QCOSInt m, QCOSInt p) : _n(n), _m(m), _p(p), _solution(solution)
@@ -244,7 +244,21 @@ PYBIND11_MODULE(qcos_ext, m)
         .def_property_readonly("x", &PyQCOSSolution::get_x)
         .def_property_readonly("s", &PyQCOSSolution::get_s)
         .def_property_readonly("y", &PyQCOSSolution::get_y)
-        .def_property_readonly("z", &PyQCOSSolution::get_z);
+        .def_property_readonly("z", &PyQCOSSolution::get_z)
+        .def_property_readonly("iters", [](const PyQCOSSolution &sol)
+                               { return sol._solution.iters; })
+        .def_property_readonly("solve_time_sec", [](const PyQCOSSolution &sol)
+                               { return sol._solution.solve_time_sec; })
+        .def_property_readonly("obj", [](const PyQCOSSolution &sol)
+                               { return sol._solution.obj; })
+        .def_property_readonly("pres", [](const PyQCOSSolution &sol)
+                               { return sol._solution.pres; })
+        .def_property_readonly("dres", [](const PyQCOSSolution &sol)
+                               { return sol._solution.dres; })
+        .def_property_readonly("gap", [](const PyQCOSSolution &sol)
+                               { return sol._solution.gap; })
+        .def_property_readonly("status", [](const PyQCOSSolution &sol)
+                               { return sol._solution.status; });
 
     // Solver.
     py::class_<PyQCOSSolver>(m, "QCOSSolver", py::module_local())
