@@ -28,6 +28,9 @@ class CMakeExtension(Extension):
         super().__init__(name, sources=[])
         self.sourcedir = os.path.abspath(sourcedir)
 
+with open('requirements.txt') as f:
+    required = f.read().splitlines()
+
 setup(
     name='qcos',
     version='0.1.0',
@@ -35,6 +38,7 @@ setup(
     author_email='govindchari1@gmail.com',
     description='QCOS: Quadratic Objective Conic Optimization Solver',
     long_description=open('README.md').read(),
+    install_requires=required,
     ext_modules=[CMakeExtension('qcos', sourcedir='src')],
     cmdclass={'build_ext': CMakeBuildExt},
     package_dir={'': 'src'},

@@ -1,6 +1,5 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
-#include <iostream>
 
 #include "qcos.h"
 
@@ -155,7 +154,6 @@ private:
 PyQCOSSolver::PyQCOSSolver(QCOSInt n, QCOSInt m, QCOSInt p, const CSC &P, const py::array_t<QCOSFloat> c, const CSC &A, const py::array_t<QCOSFloat> b, const CSC &G, const py::array_t<QCOSFloat> h, QCOSInt l, QCOSInt nsoc, const py::array_t<QCOSInt> q, QCOSSettings *settings) : n(n), m(m), p(p), _P(P), _c(c), _A(A), _b(b), _G(G), _h(h), l(l), nsoc(nsoc), _q(q)
 {
     this->_solver = new QCOSSolver();
-    std::cout << "hi" << std::endl;
     print_qcos_csc_matrix(&this->_P.getcsc());
     print_qcos_csc_matrix(&this->_A.getcsc());
     print_qcos_csc_matrix(&this->_G.getcsc());
