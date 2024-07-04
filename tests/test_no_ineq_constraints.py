@@ -1,23 +1,27 @@
 import qcospy as qcos
+
 import numpy as np
 from scipy import sparse
 
 def test_linear_objective():
-    # Define problem data
-    n = 2
-    P = None
-    c = np.array([-1, -2])
 
-    p = 0
-    A = None
-    b = None
+    n = 6
+    P = sparse.diags([1,2,3,4,5,6], 0)
+    P = P.tocsc()
 
-    l = 3
-    m = 3
+    c = np.array([1,2,3,4,5,6])
+
+    p = 2
+    A = sparse.csc_matrix([[1,1,0,0,0,0],[0,1,2,0,0,0]])
+    b = np.array([1,2])
+
+    l = 0
+    m = 0
     nsoc = 0
     q = None
-    G = sparse.csc_matrix([[-1, 0],[0, -1],[1, 1]])
-    h = np.array([0,0,1])
+    G = None
+    h = None
+
 
     # Create an QCOS object.
     prob = qcos.QCOS()
@@ -28,6 +32,6 @@ def test_linear_objective():
     # Solve problem.
     res = prob.solve()
 
-    opt_obj = -2.000
+    opt_obj = -2.700
     assert(res.status == 'QCOS_SOLVED')
-    assert abs(res.obj - opt_obj) <= 1e-4
+    assert(abs(res.obj - opt_obj) <= 1e-4)

@@ -119,4 +119,5 @@ def test_pdg():
     res = prob_qcos.solve()
 
     opt_obj = 61243.596
+    assert(res.status == 'QCOS_SOLVED')
     assert(abs(res.obj - opt_obj) <= 1e-2)
