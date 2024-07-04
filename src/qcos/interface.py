@@ -104,5 +104,3 @@ class QCOS:
 
         results = SimpleNamespace(x=self._solver.solution.x, s=self._solver.solution.s, y=self._solver.solution.y, z=self._solver.solution.z, iters=self._solver.solution.iters, solve_time_sec=self._solver.solution.solve_time_sec, obj=self._solver.solution.obj, pres=self._solver.solution.pres, dres=self._solver.solution.dres, gap=self._solver.solution.gap, status=self.solvecodes[self._solver.solution.status])
         return results
-
-        # Handle nonconvergence.
