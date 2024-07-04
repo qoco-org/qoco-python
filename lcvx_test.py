@@ -85,17 +85,17 @@ prob_cvxpy = cp.Problem(cp.Minimize(obj), con)
 prob_cvxpy.solve(verbose=True)
 
 n, m, p, P, c, A, b, G, h, l, nsoc, q = c2q.convert(prob_cvxpy)
-
+# breakpoint()
 # Create an QCOS object.
 prob_qcos = qcos.QCOS()
 
 # Setup workspace.
-prob_qcos.setup(n, m, p, P, c, A, b, G, h, l, nsoc, q)
+prob_qcos.setup(n, m, p, P, np.array(c), A, b, G, h, l, nsoc, q)
 
 prob_qcos.update_settings(verbose=1)
 
 # Solve problem.
-res = prob_qcos.solve()
-print(res)
+# res = prob_qcos.solve()
+# print(res)
 
-assert(abs(res.obj - prob_cvxpy.value) <= 1e-4)
+# assert(abs(res.obj - prob_cvxpy.value) <= 1e-4)

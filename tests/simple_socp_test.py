@@ -31,4 +31,6 @@ prob.update_settings(verbose=1)
 
 # Solve problem.
 res = prob.solve()
-print(res)
+
+opt_obj = 4.042
+assert(abs(res.obj - opt_obj) <= 1e-4)

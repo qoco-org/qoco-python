@@ -1,6 +1,5 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
-
 #include "qcos.h"
 
 namespace py = pybind11;
@@ -11,7 +10,7 @@ class CSC
 public:
     CSC(py::object A);
     ~CSC();
-    QCOSCscMatrix &getcsc() const;
+    QCOSCscMatrix *getcsc() const;
     py::array_t<QCOSFloat> _x;
     py::array_t<QCOSInt> _i;
     py::array_t<QCOSInt> _p;
@@ -27,40 +26,53 @@ CSC::CSC(py::object A)
 {
     py::object spa = py::module::import("scipy.sparse");
 
-    py::tuple dim = A.attr("shape");
-    int m = dim[0].cast<int>();
-    int n = dim[1].cast<int>();
-
-    if (!spa.attr("isspmatrix_csc")(A))
+    if (A == py::none())
     {
-        A = spa.attr("csc_matrix")(A);
+        this->m = 0;
+        this->n = 0;
+        this->nnz = 0;
+        this->_csc = nullptr;
     }
 
-    this->_p = A.attr("indptr").cast<py::array_t<QCOSInt, py::array::c_style>>();
-    this->_i = A.attr("indices").cast<py::array_t<QCOSInt, py::array::c_style>>();
-    this->_x = A.attr("data").cast<py::array_t<QCOSFloat, py::array::c_style>>();
+    else
+    {
+        py::tuple dim = A.attr("shape");
 
-    this->_csc = new QCOSCscMatrix();
-    this->_csc->m = m;
-    this->_csc->n = n;
-    this->_csc->x = (QCOSFloat *)this->_x.data();
-    this->_csc->i = (QCOSInt *)this->_i.data();
-    this->_csc->p = (QCOSInt *)this->_p.data();
-    this->_csc->nnz = A.attr("nnz").cast<int>();
+        int m = dim[0].cast<int>();
+        int n = dim[1].cast<int>();
 
-    this->m = this->_csc->m;
-    this->n = this->_csc->n;
-    this->nnz = this->_csc->nnz;
+        if (!spa.attr("isspmatrix_csc")(A))
+        {
+            A = spa.attr("csc_matrix")(A);
+        }
+
+        this->_p = A.attr("indptr").cast<py::array_t<QCOSInt, py::array::c_style>>();
+        this->_i = A.attr("indices").cast<py::array_t<QCOSInt, py::array::c_style>>();
+        this->_x = A.attr("data").cast<py::array_t<QCOSFloat, py::array::c_style>>();
+
+        this->_csc = new QCOSCscMatrix();
+        this->_csc->m = m;
+        this->_csc->n = n;
+        this->_csc->x = (QCOSFloat *)this->_x.data();
+        this->_csc->i = (QCOSInt *)this->_i.data();
+        this->_csc->p = (QCOSInt *)this->_p.data();
+        this->_csc->nnz = A.attr("nnz").cast<int>();
+
+        this->m = this->_csc->m;
+        this->n = this->_csc->n;
+        this->nnz = this->_csc->nnz;
+    }
 }
 
-QCOSCscMatrix &CSC::getcsc() const
+QCOSCscMatrix *CSC::getcsc() const
 {
-    return *this->_csc;
+    return this->_csc;
 }
 
 CSC::~CSC()
 {
-    delete this->_csc;
+    if (this->_csc)
+        delete this->_csc;
 }
 
 class PyQCOSSolution
@@ -154,15 +166,41 @@ private:
 PyQCOSSolver::PyQCOSSolver(QCOSInt n, QCOSInt m, QCOSInt p, const CSC &P, const py::array_t<QCOSFloat> c, const CSC &A, const py::array_t<QCOSFloat> b, const CSC &G, const py::array_t<QCOSFloat> h, QCOSInt l, QCOSInt nsoc, const py::array_t<QCOSInt> q, QCOSSettings *settings) : n(n), m(m), p(p), _P(P), _c(c), _A(A), _b(b), _G(G), _h(h), l(l), nsoc(nsoc), _q(q)
 {
     this->_solver = new QCOSSolver();
-    print_qcos_csc_matrix(&this->_P.getcsc());
-    print_qcos_csc_matrix(&this->_A.getcsc());
-    print_qcos_csc_matrix(&this->_G.getcsc());
-    print_arrayf((QCOSFloat *)this->_c.data(), n);
-    print_arrayf((QCOSFloat *)this->_b.data(), p);
-    print_arrayf((QCOSFloat *)this->_h.data(), m);
-    print_arrayi((QCOSInt *)this->_q.data(), nsoc);
 
-    QCOSInt status = qcos_setup(this->_solver, n, m, p, &this->_P.getcsc(), (QCOSFloat *)this->_c.data(), &this->_A.getcsc(), (QCOSFloat *)this->_b.data(), &this->_G.getcsc(), (QCOSFloat *)this->_h.data(), l, nsoc, (QCOSInt *)this->_q.data(), settings);
+    py::tuple dim = this->_b.attr("shape");
+    QCOSFloat *bptr;
+    if (dim[0].cast<int>() == 0)
+    {
+        bptr = (QCOSFloat *)nullptr;
+    }
+    else
+    {
+        bptr = (QCOSFloat *)this->_b.data();
+    }
+
+    dim = this->_h.attr("shape");
+    QCOSFloat *hptr;
+    if (dim[0].cast<int>() == 0)
+    {
+        hptr = nullptr;
+    }
+    else
+    {
+        hptr = (QCOSFloat *)this->_h.data();
+    }
+
+    dim = this->_q.attr("shape");
+    QCOSInt *qptr;
+    if (dim[0].cast<int>() == 0)
+    {
+        qptr = nullptr;
+    }
+    else
+    {
+        qptr = (QCOSInt *)this->_q.data();
+    }
+
+    QCOSInt status = qcos_setup(this->_solver, n, m, p, this->_P.getcsc(), (QCOSFloat *)this->_c.data(), this->_A.getcsc(), bptr, this->_G.getcsc(), hptr, l, nsoc, qptr, settings);
 
     if (status)
     {

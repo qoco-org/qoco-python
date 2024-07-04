@@ -41,19 +41,48 @@ class QCOS:
         self.m = m
         self.n = n
         self.p = p
-        self.P = self.ext.CSC(sparse.triu(P, format="csc").astype(np.float64))
-        self.c = c.astype(np.float64)
-        self.A = self.ext.CSC(A.astype(np.float64))
-        self.b = b.astype(np.float64)
-        self.G = self.ext.CSC(G.astype(np.float64))
-        self.h = h.astype(np.float64)
+
+        if P is not None:
+            self.P = self.ext.CSC(sparse.triu(P, format="csc").astype(np.float64))
+        else:
+            self.P = self.ext.CSC(None)
+        
+        if c is not None:
+            self.c = c.astype(np.float64)
+        else:
+            raise ValueError("c cannot be None")
+        
+        if A is not None:
+            self.A = self.ext.CSC(A.astype(np.float64))
+        else:
+            self.A = self.ext.CSC(None)
+
+        if b is not None:
+            self.b = b.astype(np.float64)
+        else:
+            self.b = np.zeros((0), np.float64)
+
+        if G is not None:
+            self.G = self.ext.CSC(G.astype(np.float64))
+        else:
+            self.G = self.ext.CSC(None)
+
+        if h is not None:
+            self.h = h.astype(np.float64)
+        else:
+            self.h = np.zeros((0), np.float64)
+
         self.l = l
         self.nsoc = nsoc
-        self.q = q.astype(np.int32)
+        if q is not None:
+            if not isinstance(q,np.ndarray):
+                q = np.array(q)
+            self.q = q.astype(np.int32)
+        else:
+            self.q = np.zeros((0), np.int32)
         self.settings = self.ext.QCOSSettings()
         self.ext.set_default_settings(self.settings)
         self.update_settings(**settings)
-
         self._solver = self.ext.QCOSSolver(
             self.n,
             self.m,
