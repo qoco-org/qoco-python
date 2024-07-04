@@ -32,7 +32,7 @@ with open('requirements.txt') as f:
     required = f.read().splitlines()
 
 setup(
-    name='qcos',
+    name='qcospy',
     version='0.1.0',
     author='Govind Chari',
     author_email='govindchari1@gmail.com',
@@ -42,6 +42,6 @@ setup(
     ext_modules=[CMakeExtension('qcos', sourcedir='src')],
     cmdclass={'build_ext': CMakeBuildExt},
     package_dir={'': 'src'},
-    packages=['qcos'],
+    packages=['qcospy'],
     zip_safe=False,
 )

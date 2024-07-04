@@ -1,4 +1,4 @@
-import qcos
+import qcospy as qcos
 import numpy as np
 from scipy import sparse
 
