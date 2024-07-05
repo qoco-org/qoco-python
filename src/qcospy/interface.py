@@ -2,7 +2,7 @@ import importlib
 import numpy as np
 from scipy import sparse
 from types import SimpleNamespace
-
+from qcospy.codegen import _generate_solver
 class QCOS:
     def __init__(self, *args, **kwargs):
         self.m = None
@@ -104,3 +104,6 @@ class QCOS:
 
         results = SimpleNamespace(x=self._solver.solution.x, s=self._solver.solution.s, y=self._solver.solution.y, z=self._solver.solution.z, iters=self._solver.solution.iters, solve_time_sec=self._solver.solution.solve_time_sec, obj=self._solver.solution.obj, pres=self._solver.solution.pres, dres=self._solver.solution.dres, gap=self._solver.solution.gap, status=self.solvecodes[self._solver.solution.status])
         return results
+    
+    def generate_solver(self, output_dir='.'):
+        _generate_solver(self.n, self.m, self.p, self.P, self.c, self.A, self.b, self.G, self.h, self.l, self.nsoc, self.q, output_dir)
