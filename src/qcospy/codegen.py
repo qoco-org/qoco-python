@@ -48,6 +48,7 @@ def generate_workspace(solver_dir, P, c, A, b, G, h, q):
     f.write("   int nsoc;\n")
     f.write("   int q[%i];\n" % (len(q)))
     f.write("} Workspace;\n\n")
+    f.write("extern Workspace work;\n")
     f.write("#endif")
     f.close()
 
@@ -64,7 +65,7 @@ def generate_utils(solver_dir, P, c, A, b, G, h, l, nsoc, q):
 
     f.write("#include \"workspace.h\"\n\n")
 
-    f.write("void load_data(Workspace* work);\n")
+    f.write("void load_data();\n")
     f.write("#endif")
     f.close()
 
@@ -72,36 +73,36 @@ def generate_utils(solver_dir, P, c, A, b, G, h, l, nsoc, q):
     f = open(solver_dir + "/utils.c", "a")
     f.write("#include \"utils.h\"\n\n")
 
-    f.write("void load_data(Workspace* work){\n")
+    f.write("void load_data(){\n")
     for i in range(len(P.x)):
-        f.write("   work->P[%i] = %.17g;\n" % (i, P.x[i]))
+        f.write("   work.P[%i] = %.17g;\n" % (i, P.x[i]))
     f.write("\n")
 
     for i in range(len(c)):
-        f.write("   work->c[%i] = %.17g;\n" % (i, c[i]))
+        f.write("   work.c[%i] = %.17g;\n" % (i, c[i]))
     f.write("\n")
 
     for i in range(len(A.x)):
-        f.write("   work->A[%i] = %.17g;\n" % (i, A.x[i]))
+        f.write("   work.A[%i] = %.17g;\n" % (i, A.x[i]))
     f.write("\n")
 
     for i in range(len(b)):
-        f.write("   work->b[%i] = %.17g;\n" % (i, b[i]))
+        f.write("   work.b[%i] = %.17g;\n" % (i, b[i]))
     f.write("\n")
 
     for i in range(len(G.x)):
-        f.write("   work->G[%i] = %.17g;\n" % (i, G.x[i]))
+        f.write("   work.G[%i] = %.17g;\n" % (i, G.x[i]))
     f.write("\n")
 
     for i in range(len(h)):
-        f.write("   work->h[%i] = %.17g;\n" % (i, h[i]))
+        f.write("   work.h[%i] = %.17g;\n" % (i, h[i]))
     f.write("\n")
 
-    f.write("   work->l = %d;\n" % l)
-    f.write("   work->nsoc = %d;\n" % nsoc)
+    f.write("   work.l = %d;\n" % l)
+    f.write("   work.nsoc = %d;\n" % nsoc)
 
     for i in range(len(q)):
-        f.write("   work->q[%i] = %d;\n" % (i, q[i]))
+        f.write("   work.q[%i] = %d;\n" % (i, q[i]))
     f.write("\n")
     f.write("}")
     f.close()
@@ -122,8 +123,8 @@ def generate_solver(solver_dir):
 def generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q):
     f = open(solver_dir + "/runtest.c", "a")
     f.write("#include \"qcosgen.h\"\n\n")
+    f.write("Workspace work;\n")
     f.write("int main(){\n")
-    f.write("   Workspace work;\n")
-    f.write("   load_data(&work);\n")
+    f.write("   load_data();\n")
     f.write("}")
     f.close()
