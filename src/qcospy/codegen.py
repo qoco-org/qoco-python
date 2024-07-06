@@ -16,7 +16,21 @@ def _generate_solver(n, m, p, P, c, A, b, G, h, l, nsoc, q, output_dir, name="qc
     generate_workspace(solver_dir, P, c, A, b, G, h, q)
     generate_ldl(A, solver_dir)
     generate_utils(solver_dir, P, c, A, b, G, h, l, nsoc, q)
+    generate_solver(solver_dir)
     generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q)
+
+def generate_cmakelists(solver_dir):
+    f = open(solver_dir + "/CMakeLists.txt", "a")
+    f.write("cmake_minimum_required(VERSION 3.18)\n")
+    f.write("set(CMAKE_C_FLAGS \"-O3 -march=native -Wall -Wextra\")\n")
+    f.write("project(qcosgen)\n\n")
+    f.write("# Build qcosgen shared library.\n")
+    f.write("add_library(qcosgen SHARED)\n")
+    f.write("target_sources(qcosgen PRIVATE qcosgen.c utils.c ldl.c)\n\n")
+    f.write("# Build qcos demo.\n")
+    f.write("add_executable(runtest runtest.c)\n")
+    f.write("target_link_libraries(runtest qcosgen)\n")
+    f.close()
 
 def generate_workspace(solver_dir, P, c, A, b, G, h, q):
     f = open(solver_dir + "/workspace.h", "a")
@@ -35,6 +49,11 @@ def generate_workspace(solver_dir, P, c, A, b, G, h, q):
     f.write("   int q[%i];\n" % (len(q)))
     f.write("} Workspace;\n\n")
     f.write("#endif")
+    f.close()
+
+def generate_ldl(M, solver_dir):
+    f = open(solver_dir + "/ldl.c", "a")
+    f.write("#include \"workspace.h\"\n\n")
     f.close()
 
 def generate_utils(solver_dir, P, c, A, b, G, h, l, nsoc, q):
@@ -87,30 +106,24 @@ def generate_utils(solver_dir, P, c, A, b, G, h, l, nsoc, q):
     f.write("}")
     f.close()
 
+def generate_solver(solver_dir):
+    f = open(solver_dir + "/qcosgen.h", "a")
+    f.write("#ifndef QCOSGEN_H\n")
+    f.write("#define QCOSGEN_H\n\n")
+    f.write("#include \"workspace.h\"\n")
+    f.write("#include \"utils.h\"\n\n")
+    f.write("#endif")
+    f.close()
+
+    f = open(solver_dir + "/qcosgen.c", "a")
+    f.write("#include \"qcosgen.h\"\n\n")
+    f.close()
+
 def generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q):
     f = open(solver_dir + "/runtest.c", "a")
-    f.write("#include \"workspace.h\"\n\n")
-    f.write("#include \"utils.h\"\n\n")
+    f.write("#include \"qcosgen.h\"\n\n")
     f.write("int main(){\n")
     f.write("   Workspace work;\n")
     f.write("   load_data(&work);\n")
     f.write("}")
-    f.close()
-
-def generate_ldl(M, solver_dir):
-    f = open(solver_dir + "/ldl.c", "a")
-    f.write("#include \"workspace.h\"\n\n")
-    f.close()
-
-def generate_cmakelists(solver_dir):
-    f = open(solver_dir + "/CMakeLists.txt", "a")
-    f.write("cmake_minimum_required(VERSION 3.18)\n")
-    f.write("set(CMAKE_C_FLAGS \"-O3 -march=native -Wall -Wextra\")\n")
-    f.write("project(qcosgen)\n")
-    f.write("# Build qcosgen shared library.\n")
-    f.write("add_library(qcosgen SHARED)\n")
-    f.write("target_sources(qcosgen PRIVATE utils.c ldl.c)\n\n")
-    f.write("# Build qcos demo.\n")
-    f.write("add_executable(runtest runtest.c)\n")
-    f.write("target_link_libraries(runtest qcosgen)\n")
     f.close()
