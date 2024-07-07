@@ -1,0 +1,1 @@
+pip install . && python gen_test.py && cd qcosgen && mkdir build && cd build && cmake .. && make && ./runtest && cd ../..

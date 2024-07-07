@@ -18,6 +18,17 @@ class QCOS:
         self.nsoc = None
         self.q = None
 
+        self.Psp = None
+        self.c = None
+        self.Asp = None
+        self.b = None
+        self.Gsp = None
+        self.h = None
+        self.l = None
+        self.nsoc = None
+        self.q = None
+
+
         self.solvecodes = ["QCOS_UNSOLVED", "QCOS_SOLVED", "QCOS_SOLVED_INACCURATE", "QCOS_MAX_ITER"]
 
         self.ext = importlib.import_module('qcos_ext')
@@ -41,6 +52,9 @@ class QCOS:
         self.m = m
         self.n = n
         self.p = p
+        self.Psp = P.astype(np.float64)
+        self.Asp = A.astype(np.float64)
+        self.Gsp = G.astype(np.float64)
 
         if P is not None:
             self.P = self.ext.CSC(sparse.triu(P, format="csc").astype(np.float64))
@@ -106,4 +120,4 @@ class QCOS:
         return results
     
     def generate_solver(self, output_dir='.'):
-        _generate_solver(self.n, self.m, self.p, self.P, self.c, self.A, self.b, self.G, self.h, self.l, self.nsoc, self.q, output_dir)
+        _generate_solver(self.n, self.m, self.p, self.Psp, self.c, self.Asp, self.b, self.Gsp, self.h, self.l, self.nsoc, self.q, output_dir)

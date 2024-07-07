@@ -4,3 +4,4 @@ numpy>=1.7
 # the transpose of the original, breaking the unit tests. This was fixed in 1.13.0.
 # ref: https://github.com/scipy/scipy/issues/20027
 scipy>=0.13.2,!=1.12.0
+qdldl

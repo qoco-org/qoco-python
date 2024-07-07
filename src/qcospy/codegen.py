@@ -1,5 +1,10 @@
 import os
 import shutil
+import qdldl
+import numpy as np
+from scipy import sparse
+from matplotlib import pyplot as plt
+from qcospy.codegen_utils import *
 
 def _generate_solver(n, m, p, P, c, A, b, G, h, l, nsoc, q, output_dir, name="qcosgen"):
     solver_dir = output_dir + "/" + name
@@ -11,10 +16,17 @@ def _generate_solver(n, m, p, P, c, A, b, G, h, l, nsoc, q, output_dir, name="qc
     
     print("Generating solver.")
     os.mkdir(solver_dir)
+    W = sparse.identity(l)
+    W = sparse.csc_matrix(W)
+    for qi in q:
+        Wsoc = np.ones((qi, qi), dtype=np.float64)
+        Wsoc = sparse.csc_matrix(Wsoc)
+        W = sparse.bmat([[W, None],[None, Wsoc]])
+    W = sparse.csc_matrix(W)
 
     generate_cmakelists(solver_dir)
-    generate_workspace(solver_dir, P, c, A, b, G, h, q)
-    generate_ldl(A, solver_dir)
+    generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q)
+    generate_ldl(n, m, p, P, A, G, W, solver_dir)
     generate_utils(solver_dir, P, c, A, b, G, h, l, nsoc, q)
     generate_solver(solver_dir)
     generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q)
@@ -32,29 +44,52 @@ def generate_cmakelists(solver_dir):
     f.write("target_link_libraries(runtest qcosgen)\n")
     f.close()
 
-def generate_workspace(solver_dir, P, c, A, b, G, h, q):
+def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q):
     f = open(solver_dir + "/workspace.h", "a")
     f.write("#ifndef WORKSPACE_H\n")
     f.write("#define WORKSPACE_H\n\n")
 
     f.write("typedef struct {\n")
-    f.write("   double P[%i];\n" % (len(P.x)))
-    f.write("   double c[%i];\n" % (len(c)))
-    f.write("   double A[%i];\n" % (len(A.x)))
-    f.write("   double b[%i];\n" % (len(b)))
-    f.write("   double G[%i];\n" % (len(G.x)))
-    f.write("   double h[%i];\n" % (len(h)))
+    f.write("   double P[%i];\n" % (len(P.data)))
+    f.write("   double c[%i];\n" % (n))
+    f.write("   double A[%i];\n" % (len(A.data)))
+    f.write("   double b[%i];\n" % (p))
+    f.write("   double G[%i];\n" % (len(G.data)))
+    f.write("   double h[%i];\n" % (m))
     f.write("   int l;\n")
     f.write("   int nsoc;\n")
     f.write("   int q[%i];\n" % (len(q)))
+    f.write("   double L[%i];\n" % ((n + m + p) ** 2)) # This assumes L is dense. Fix this.
+    f.write("   double D[%i];\n" % (n + m + p))
+    f.write("   double W[%i];\n" % m**2) # This assumes W is dense. Fix this.
     f.write("} Workspace;\n\n")
     f.write("extern Workspace work;\n")
     f.write("#endif")
     f.close()
 
-def generate_ldl(M, solver_dir):
+def generate_ldl(n, m, p, P, A, G, W, solver_dir):
+    f = open(solver_dir + "/ldl.h", "a")
+    f.write("#ifndef LDL_H\n")
+    f.write("#define LDL_H\n\n")
+    f.write("void ldl();\n")
+    f.write("#endif")
+    f.close()
+
+    # Get sparsity pattern of the regularized KKT matrix.
+    reg = 1
+    K = sparse.bmat([[P + reg * sparse.identity(n), A.T, G.T],[A, - reg * sparse.identity(p), None], [G, None, -W]])
+    solver = qdldl.Solver(K)
+    L, D, perm = solver.factors()
+
     f = open(solver_dir + "/ldl.c", "a")
     f.write("#include \"workspace.h\"\n\n")
+    f.write("void ldl(){\n")
+    for j in range(n + m + p):
+        f.write("   work.D[%d] = " % j)
+        write_Kelem(f, j, j, n, m, p, P, A, G, reg)
+        f.write(";\n")
+
+    f.write("}")
     f.close()
 
 def generate_utils(solver_dir, P, c, A, b, G, h, l, nsoc, q):
@@ -74,24 +109,24 @@ def generate_utils(solver_dir, P, c, A, b, G, h, l, nsoc, q):
     f.write("#include \"utils.h\"\n\n")
 
     f.write("void load_data(){\n")
-    for i in range(len(P.x)):
-        f.write("   work.P[%i] = %.17g;\n" % (i, P.x[i]))
+    for i in range(len(P.data)):
+        f.write("   work.P[%i] = %.17g;\n" % (i, P.data[i]))
     f.write("\n")
 
     for i in range(len(c)):
         f.write("   work.c[%i] = %.17g;\n" % (i, c[i]))
     f.write("\n")
 
-    for i in range(len(A.x)):
-        f.write("   work.A[%i] = %.17g;\n" % (i, A.x[i]))
+    for i in range(len(A.data)):
+        f.write("   work.A[%i] = %.17g;\n" % (i, A.data[i]))
     f.write("\n")
 
     for i in range(len(b)):
         f.write("   work.b[%i] = %.17g;\n" % (i, b[i]))
     f.write("\n")
 
-    for i in range(len(G.x)):
-        f.write("   work.G[%i] = %.17g;\n" % (i, G.x[i]))
+    for i in range(len(G.data)):
+        f.write("   work.G[%i] = %.17g;\n" % (i, G.data[i]))
     f.write("\n")
 
     for i in range(len(h)):
@@ -111,8 +146,9 @@ def generate_solver(solver_dir):
     f = open(solver_dir + "/qcosgen.h", "a")
     f.write("#ifndef QCOSGEN_H\n")
     f.write("#define QCOSGEN_H\n\n")
+    f.write("#include \"ldl.h\"\n")
+    f.write("#include \"utils.h\"\n")
     f.write("#include \"workspace.h\"\n")
-    f.write("#include \"utils.h\"\n\n")
     f.write("#endif")
     f.close()
 
@@ -126,5 +162,6 @@ def generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q):
     f.write("Workspace work;\n")
     f.write("int main(){\n")
     f.write("   load_data();\n")
+    f.write("   ldl();")
     f.write("}")
     f.close()
