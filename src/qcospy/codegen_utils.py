@@ -33,6 +33,8 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, reg):
             # need to get index of P[i,j] in the data array for P.
             dataidx = get_data_idx(P, i, j)
             f.write("work.P[%d]" % dataidx)
+        if (i == j):
+            f.write(" + %f" % reg)
     
     # A' block    
     if (i < n and j >= n and j < n + p):
@@ -74,7 +76,7 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, reg):
         else:
             f.write("-%f" % reg)
 
-    # Nesterov-Todd block.
+    # Nesterov-Todd block. TODO: assumes W is dense and doesnt use W'*W.
     if (i >= n + p and i < n + p + m and j >= n + p and j < n + m + p):
         # Row and column of G
         row = i - n - p
