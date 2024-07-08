@@ -80,7 +80,7 @@ def generate_ldl(n, m, p, P, A, G, W, solver_dir):
 
     # Get sparsity pattern of the regularized KKT matrix.
     reg = 1
-    K = sparse.bmat([[P + reg * sparse.identity(n), A.T, G.T],[A, - reg * sparse.identity(p), None], [G, None, -W]])
+    K = sparse.bmat([[P + reg * sparse.identity(n), A.T, G.T],[A, -reg * sparse.identity(p), None], [G, None, -W]])
     solver = qdldl.Solver(K)
     L, D, perm = solver.factors()
 
@@ -94,19 +94,19 @@ def generate_ldl(n, m, p, P, A, G, W, solver_dir):
         # D update.
         f.write("   work.D[%d] = " % j)
         write_Kelem(f, j, j, n, m, p, P, A, G, reg)
-        if (j > 0):
-            for k in range(j):
-                f.write(" - work.D[%i] * " % k)
-                f.write("work.L[%i] * work.L[%i]" % (k * N + j, k * N + j))
+        for k in range(j):
+            f.write(" - work.D[%i] * " % k)
+            f.write("work.L[%i] * work.L[%i]" % (k * N + j, k * N + j))
         f.write(";\n")
 
+        # L update.
         for i in range(j + 1, N):
             f.write("   work.L[%i] = " % (j * N + i))
             write_Kelem(f, j, i, n, m, p, P, A, G, reg)
             for k in range(j):
-                f.write(" - work.L[%i] * work.L[%i] * work.D[%i]" % (k * N + i, k * N + j, j))
+                f.write(" - work.L[%i] * work.L[%i] * work.D[%i]" % (k * N + i, k * N + j, k))
             f.write(";\n")
-            f.write("   work.L[%i] /= work.D[%i];\n" % (j * N+ i, j))
+            f.write("   work.L[%i] /= work.D[%i];\n" % (j * N + i, j))
     f.write("}")
     f.close()
 
@@ -161,8 +161,19 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q):
         f.write("   work.q[%i] = %d;\n" % (i, q[i]))
     f.write("\n")
 
-    for i in range(m**2):
-        f.write("   work.W[%i] = -1.0;\n" % (i))
+    for j in range(m):
+        for i in range(m):
+            if (i < 3 and j < 3 and i == j):
+                f.write("   work.W[%i] = -1.0;\n" % (j*m + i))
+            elif (i >= 3 and j >= 3):
+                f.write("   work.W[%i] = -1.0;\n" % (j*m + i))
+            else:
+                f.write("   work.W[%i] = 0.0;\n" % (j*m + i))
+
+
+
+    # for i in range(m**2):
+    #     f.write("   work.W[%i] = -1.0;\n" % (i))
     f.write("\n")
     f.write("}")
     f.close()
@@ -189,8 +200,16 @@ def generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q):
     f.write("int main(){\n")
     f.write("   load_data();\n")
     f.write("   ldl();\n")
+    f.write("   printf(\"D: {\");")
     f.write("   for(int i = 0; i < work.n + work.m + work.p; ++i){\n")
     f.write("   printf(\"%f, \", work.D[i]);\n")
     f.write("   }\n")
+    f.write("   printf(\"}\\n\");\n")
+
+    f.write("   printf(\"L: {\");")
+    f.write("   for(int i = 0; i < (work.n + work.m + work.p) * (work.n + work.m + work.p); ++i){\n")
+    f.write("   printf(\"%f\\n\", work.L[i]);\n")
+    f.write("   }\n")
+    f.write("   printf(\"}\\n\");\n")
     f.write("}")
     f.close()
