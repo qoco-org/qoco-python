@@ -20,13 +20,21 @@ def write_int(f, x, name):
     f.write("int %s = %i;\n" % (name, x))
     
 # Writes the 1D array index of the (i,j) element of the KKT matrix [P+reg*I A' G';A -reg*I 0;G 0 -W'W]
-def write_Kelem(f, i, j, n, m, p, P, A, G, reg):
+def write_Kelem(f, i, j, n, m, p, P, A, G, reg, perm):
+
+    # Row and column to access within KKT matrix.
+    i = perm[i]
+    j = perm[j]
+
+    # If accessing a lower triangular element, index the corresponding upper triangular element (Otherwise would have to add logic for accessing lower triangular blocks).
     if (i > j):
-        raise ValueError("Accessing lower triangular part of K.")
+        temp = i
+        i = j
+        j = temp
     
     # P block
     if (i < n and j < n):
-        # Check if element is nonzero.
+        # Check if element is nonzero. TODO: There should be a better way to check if an element is nonzero.
         if P[i,j] == 0.0:
             f.write("0")
         else:
@@ -37,12 +45,12 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, reg):
             f.write(" + %f" % reg)
     
     # A' block    
-    if (i < n and j >= n and j < n + p):
+    elif (i < n and j >= n and j < n + p):
         # Row and column of A
         col = i
         row = j - n
 
-        # Check if element is nonzero.
+        # Check if element is nonzero. TODO: There should be a better way to check if an element is nonzero.
         if A[row,col] == 0.0:
             f.write("0")
         else:
@@ -51,12 +59,12 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, reg):
             f.write("work.A[%d]" % dataidx)
 
     # G' block    
-    if (i < n and j >= n + p and j < n + p + m):
+    elif (i < n and j >= n + p and j < n + p + m):
         # Row and column of G
         col = i
         row = j - n - p
 
-        # Check if element is nonzero.
+        # Check if element is nonzero.  TODO: There should be a better way to check if an element is nonzero.
         if G[row,col] == 0.0:
             f.write("0")
         else:
@@ -65,7 +73,7 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, reg):
             f.write("work.G[%d]" % dataidx)
     
     # -reg * I block.
-    if (i >= n and i < n + p and j >= n and j < n + p):
+    elif (i >= n and i < n + p and j >= n and j < n + p):
         # Row and column of G
         row = i - n
         col = j - n
@@ -76,13 +84,16 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, reg):
         else:
             f.write("-%f" % reg)
 
+    # Accessing the (2,3) block of the KKT matrix.
+    elif (i >= n and i < n + p and j >= n + p and j < n + m + p):
+        f.write("0")
+
     # Nesterov-Todd block. TODO: assumes W is dense and doesnt use W'*W.
-    if (i >= n + p and i < n + p + m and j >= n + p and j < n + m + p):
+    elif (i >= n + p and i < n + p + m and j >= n + p and j < n + m + p):
         # Row and column of G
         row = i - n - p
         col = j - n - p
         f.write("work.W[%d]" % (col * m + row))
-
 
 def get_data_idx(M, i, j):
     for dataidx in range(M.indptr[j], M.indptr[j+1]):

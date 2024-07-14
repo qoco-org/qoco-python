@@ -24,9 +24,16 @@ def _generate_solver(n, m, p, P, c, A, b, G, h, l, nsoc, q, output_dir, name="qc
         W = sparse.bmat([[W, None],[None, Wsoc]])
     W = sparse.csc_matrix(W)
 
+    # Get sparsity pattern of the regularized KKT matrix.
+    reg = 1
+    K = sparse.bmat([[P + reg * sparse.identity(n), A.T, G.T],[A, -reg * sparse.identity(p), None], [G, None, -W]])
+    solver = qdldl.Solver(K)
+    L, D, perm = solver.factors()
+    breakpoint()
+
     generate_cmakelists(solver_dir)
     generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q)
-    generate_ldl(n, m, p, P, A, G, W, solver_dir)
+    generate_ldl(n, m, p, P, A, G, perm, reg, solver_dir)
     generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q)
     generate_solver(solver_dir)
     generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q)
@@ -70,7 +77,7 @@ def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q):
     f.write("#endif")
     f.close()
 
-def generate_ldl(n, m, p, P, A, G, W, solver_dir):
+def generate_ldl(n, m, p, P, A, G, perm, reg, solver_dir):
     f = open(solver_dir + "/ldl.h", "a")
     f.write("#ifndef LDL_H\n")
     f.write("#define LDL_H\n\n")
@@ -78,22 +85,18 @@ def generate_ldl(n, m, p, P, A, G, W, solver_dir):
     f.write("#endif")
     f.close()
 
-    # Get sparsity pattern of the regularized KKT matrix.
-    reg = 1
-    K = sparse.bmat([[P + reg * sparse.identity(n), A.T, G.T],[A, -reg * sparse.identity(p), None], [G, None, -W]])
-    solver = qdldl.Solver(K)
-    L, D, perm = solver.factors()
-
     f = open(solver_dir + "/ldl.c", "a")
     f.write("#include \"workspace.h\"\n\n")
     f.write("void ldl(){\n")
     N = n + m + p
+
+    # Set main diagonal of L to all ones. Shouldn't be necessary.
     for j in range(N):
         f.write("   work.L[%d] = 1.0;\n" % (j * N + j))
     for j in range(N):
         # D update.
         f.write("   work.D[%d] = " % j)
-        write_Kelem(f, j, j, n, m, p, P, A, G, reg)
+        write_Kelem(f, j, j, n, m, p, P, A, G, reg, perm)
         for k in range(j):
             f.write(" - work.D[%i] * " % k)
             f.write("work.L[%i] * work.L[%i]" % (k * N + j, k * N + j))
@@ -102,7 +105,7 @@ def generate_ldl(n, m, p, P, A, G, W, solver_dir):
         # L update.
         for i in range(j + 1, N):
             f.write("   work.L[%i] = " % (j * N + i))
-            write_Kelem(f, j, i, n, m, p, P, A, G, reg)
+            write_Kelem(f, j, i, n, m, p, P, A, G, reg, perm)
             for k in range(j):
                 f.write(" - work.L[%i] * work.L[%i] * work.D[%i]" % (k * N + i, k * N + j, k))
             f.write(";\n")
@@ -161,6 +164,7 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q):
         f.write("   work.q[%i] = %d;\n" % (i, q[i]))
     f.write("\n")
 
+    # Temporary code to set the NT scaling matrix to test ldl.
     for j in range(m):
         for i in range(m):
             if (i < 3 and j < 3 and i == j):
@@ -170,10 +174,6 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q):
             else:
                 f.write("   work.W[%i] = 0.0;\n" % (j*m + i))
 
-
-
-    # for i in range(m**2):
-    #     f.write("   work.W[%i] = -1.0;\n" % (i))
     f.write("\n")
     f.write("}")
     f.close()
