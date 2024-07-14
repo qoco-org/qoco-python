@@ -29,11 +29,17 @@ def _generate_solver(n, m, p, P, c, A, b, G, h, l, nsoc, q, output_dir, name="qc
     K = sparse.bmat([[P + reg * sparse.identity(n), A.T, G.T],[A, -reg * sparse.identity(p), None], [G, None, -W]])
     solver = qdldl.Solver(K)
     L, D, perm = solver.factors()
-    breakpoint()
+
+    N = n + m + p
+    Lidx = [False for _ in range(N**2)]
+    for i in range(N):
+        for j in range(N):
+            if (L[i,j] != 0.0):
+                Lidx[j*N + i] = True
 
     generate_cmakelists(solver_dir)
-    generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q)
-    generate_ldl(n, m, p, P, A, G, perm, reg, solver_dir)
+    generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, L.nnz)
+    Ldense2sparse = generate_ldl(n, m, p, P, A, G, perm, reg, Lidx, solver_dir)
     generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q)
     generate_solver(solver_dir)
     generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q)
@@ -51,7 +57,7 @@ def generate_cmakelists(solver_dir):
     f.write("target_link_libraries(runtest qcosgen)\n")
     f.close()
 
-def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q):
+def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz):
     f = open(solver_dir + "/workspace.h", "a")
     f.write("#ifndef WORKSPACE_H\n")
     f.write("#define WORKSPACE_H\n\n")
@@ -69,15 +75,15 @@ def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q):
     f.write("   int l;\n")
     f.write("   int nsoc;\n")
     f.write("   int q[%i];\n" % (len(q)))
-    f.write("   double L[%i];\n" % ((n + m + p) ** 2)) # This assumes L is dense. Fix this.
+    f.write("   double L[%i];\n" % (Lnnz))
     f.write("   double D[%i];\n" % (n + m + p))
-    f.write("   double W[%i];\n" % m**2) # This assumes W is dense. Fix this.
+    f.write("   double W[%i];\n" % m**2) # TODO This assumes W is dense. Fix this.
     f.write("} Workspace;\n\n")
     f.write("extern Workspace work;\n")
     f.write("#endif")
     f.close()
 
-def generate_ldl(n, m, p, P, A, G, perm, reg, solver_dir):
+def generate_ldl(n, m, p, P, A, G, perm, reg, Lidx, solver_dir):
     f = open(solver_dir + "/ldl.h", "a")
     f.write("#ifndef LDL_H\n")
     f.write("#define LDL_H\n\n")
@@ -90,28 +96,37 @@ def generate_ldl(n, m, p, P, A, G, perm, reg, solver_dir):
     f.write("void ldl(){\n")
     N = n + m + p
 
-    # Set main diagonal of L to all ones. Shouldn't be necessary.
-    for j in range(N):
-        f.write("   work.L[%d] = 1.0;\n" % (j * N + j))
+    # Maps dense 1D index of L to its sparse index.
+    Ldense2sparse = -np.ones(N**2)
+
+    # Number of nonzeros of L added (Used to get sparse index of the current element under consideration).
+    Lnnz = 0
+
     for j in range(N):
         # D update.
         f.write("   work.D[%d] = " % j)
         write_Kelem(f, j, j, n, m, p, P, A, G, reg, perm)
         for k in range(j):
-            f.write(" - work.D[%i] * " % k)
-            f.write("work.L[%i] * work.L[%i]" % (k * N + j, k * N + j))
+            if (Lidx[k * N + j]):
+                f.write(" - work.D[%i] * " % k)
+                f.write("work.L[%i] * work.L[%i]" % (Ldense2sparse[k * N + j], Ldense2sparse[k * N + j]))
         f.write(";\n")
 
         # L update.
         for i in range(j + 1, N):
-            f.write("   work.L[%i] = " % (j * N + i))
-            write_Kelem(f, j, i, n, m, p, P, A, G, reg, perm)
-            for k in range(j):
-                f.write(" - work.L[%i] * work.L[%i] * work.D[%i]" % (k * N + i, k * N + j, k))
-            f.write(";\n")
-            f.write("   work.L[%i] /= work.D[%i];\n" % (j * N + i, j))
+            if (Lidx[j * N + i]):
+                Ldense2sparse[j * N + i] = Lnnz
+                f.write("   work.L[%i] = " % (Lnnz))
+                write_Kelem(f, j, i, n, m, p, P, A, G, reg, perm)
+                for k in range(j):
+                    if (Lidx[k * N + i] and Lidx[k * N + j]):
+                        f.write(" - work.L[%i] * work.L[%i] * work.D[%i]" % (Ldense2sparse[k * N + i], Ldense2sparse[k * N + j], k))
+                f.write(";\n")
+                f.write("   work.L[%i] /= work.D[%i];\n" % (Lnnz, j))
+                Lnnz += 1
     f.write("}")
     f.close()
+    return Ldense2sparse
 
 def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q):
     # Write header.
