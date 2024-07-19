@@ -1,26 +1,5 @@
-def write_vectori(f, x, name):
-    if x is None or len(x) == 0:
-        f.write("int* %s = nullptr;\n" % name)
-    else:
-        f.write("int %s[%i] = {" % (name, len(x)))
-        for i in x:
-            f.write("%i," % i)
-        f.write("};\n")
-
-def write_vectorf(f, x, name):
-    if x is None or len(x) == 0:
-        f.write("double* %s = nullptr;\n" % name)
-    else:
-        f.write("double %s[%i] = {" % (name, len(x)))
-        for i in x:
-            f.write("%.17g," % i)
-        f.write("};\n")
-
-def write_int(f, x, name):
-    f.write("int %s = %i;\n" % (name, x))
-    
 # Writes the 1D array index of the (i,j) element of the KKT matrix [P+reg*I A' G';A -reg*I 0;G 0 -W'W]
-def write_Kelem(f, i, j, n, m, p, P, A, G, reg, perm):
+def write_Kelem(f, i, j, n, m, p, P, A, G, reg, perm, Wsparse2dense):
 
     # Row and column to access within KKT matrix.
     i = perm[i]
@@ -88,12 +67,19 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, reg, perm):
     elif (i >= n and i < n + p and j >= n + p and j < n + m + p):
         f.write("0")
 
-    # Nesterov-Todd block. TODO: assumes W is dense and doesnt use W'*W.
+    # Nesterov-Todd block.
     elif (i >= n + p and i < n + p + m and j >= n + p and j < n + m + p):
         # Row and column of G
         row = i - n - p
         col = j - n - p
-        f.write("work.W[%d]" % (col * m + row))
+
+        # Only access lower triangular elements of W.
+        if (row > col):
+            temp = row
+            row = col
+            col = temp
+
+        f.write("work.W[%d]" % Wsparse2dense[col * m + row])
 
 def get_data_idx(M, i, j):
     for dataidx in range(M.indptr[j], M.indptr[j+1]):

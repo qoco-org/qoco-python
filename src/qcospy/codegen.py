@@ -24,6 +24,18 @@ def _generate_solver(n, m, p, P, c, A, b, G, h, l, nsoc, q, output_dir, name="qc
         W = sparse.bmat([[W, None],[None, Wsoc]])
     W = sparse.csc_matrix(W)
 
+    Wnnz = int((W.nnz - m) / 2 + m)
+    Wnnz_cnt = 0
+
+    # Maps sparse 1D index (1,...,m^2) of W to its sparse index (1,...,Wnnz). Note that accessing an upper triangular element of W returns -1.
+    Wsparse2dense = -np.ones((m*m,1))
+    for j in range(m):
+        for i in range(m):
+            if (W[i,j] != 0.0 and i <= j):
+                Wsparse2dense[i + j * m] = Wnnz_cnt
+                Wnnz_cnt+=1
+    breakpoint()
+
     # Get sparsity pattern of the regularized KKT matrix.
     reg = 1
     K = sparse.bmat([[P + reg * sparse.identity(n), A.T, G.T],[A, -reg * sparse.identity(p), None], [G, None, -W]])
@@ -38,9 +50,9 @@ def _generate_solver(n, m, p, P, c, A, b, G, h, l, nsoc, q, output_dir, name="qc
                 Lidx[j*N + i] = True
 
     generate_cmakelists(solver_dir)
-    generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, L.nnz)
-    Ldense2sparse = generate_ldl(n, m, p, P, A, G, perm, reg, Lidx, solver_dir)
-    generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q)
+    generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, L.nnz, Wnnz)
+    Lsparse2dense = generate_ldl(n, m, p, P, A, G, perm, reg, Lidx, Wsparse2dense, solver_dir)
+    generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2dense)
     generate_solver(solver_dir)
     generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q)
 
@@ -57,7 +69,7 @@ def generate_cmakelists(solver_dir):
     f.write("target_link_libraries(runtest qcosgen)\n")
     f.close()
 
-def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz):
+def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz, Wnnz):
     f = open(solver_dir + "/workspace.h", "a")
     f.write("#ifndef WORKSPACE_H\n")
     f.write("#define WORKSPACE_H\n\n")
@@ -77,13 +89,13 @@ def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz):
     f.write("   int q[%i];\n" % (len(q)))
     f.write("   double L[%i];\n" % (Lnnz))
     f.write("   double D[%i];\n" % (n + m + p))
-    f.write("   double W[%i];\n" % m**2) # TODO This assumes W is dense. Fix this.
+    f.write("   double W[%i];\n" % Wnnz)
     f.write("} Workspace;\n\n")
     f.write("extern Workspace work;\n")
     f.write("#endif")
     f.close()
 
-def generate_ldl(n, m, p, P, A, G, perm, reg, Lidx, solver_dir):
+def generate_ldl(n, m, p, P, A, G, perm, reg, Lidx, Wsparse2dense, solver_dir):
     f = open(solver_dir + "/ldl.h", "a")
     f.write("#ifndef LDL_H\n")
     f.write("#define LDL_H\n\n")
@@ -96,39 +108,40 @@ def generate_ldl(n, m, p, P, A, G, perm, reg, Lidx, solver_dir):
     f.write("void ldl(){\n")
     N = n + m + p
 
-    # Maps dense 1D index of L to its sparse index.
-    Ldense2sparse = -np.ones(N**2)
+    # Maps sparse 1D index (1,...,N^2) of L to its sparse index (1,...,Lnnz).
+    Lsparse2dense = -np.ones(N**2)
 
     # Number of nonzeros of L added (Used to get sparse index of the current element under consideration).
     Lnnz = 0
 
+    # The factorization will only access strictly lower triangular elements of L.
     for j in range(N):
         # D update.
         f.write("   work.D[%d] = " % j)
-        write_Kelem(f, j, j, n, m, p, P, A, G, reg, perm)
+        write_Kelem(f, j, j, n, m, p, P, A, G, reg, perm, Wsparse2dense)
         for k in range(j):
             if (Lidx[k * N + j]):
                 f.write(" - work.D[%i] * " % k)
-                f.write("work.L[%i] * work.L[%i]" % (Ldense2sparse[k * N + j], Ldense2sparse[k * N + j]))
+                f.write("work.L[%i] * work.L[%i]" % (Lsparse2dense[k * N + j], Lsparse2dense[k * N + j]))
         f.write(";\n")
 
         # L update.
         for i in range(j + 1, N):
             if (Lidx[j * N + i]):
-                Ldense2sparse[j * N + i] = Lnnz
+                Lsparse2dense[j * N + i] = Lnnz
                 f.write("   work.L[%i] = " % (Lnnz))
-                write_Kelem(f, j, i, n, m, p, P, A, G, reg, perm)
+                write_Kelem(f, j, i, n, m, p, P, A, G, reg, perm, Wsparse2dense)
                 for k in range(j):
                     if (Lidx[k * N + i] and Lidx[k * N + j]):
-                        f.write(" - work.L[%i] * work.L[%i] * work.D[%i]" % (Ldense2sparse[k * N + i], Ldense2sparse[k * N + j], k))
+                        f.write(" - work.L[%i] * work.L[%i] * work.D[%i]" % (Lsparse2dense[k * N + i], Lsparse2dense[k * N + j], k))
                 f.write(";\n")
                 f.write("   work.L[%i] /= work.D[%i];\n" % (Lnnz, j))
                 Lnnz += 1
     f.write("}")
     f.close()
-    return Ldense2sparse
+    return Lsparse2dense
 
-def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q):
+def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2dense):
     # Write header.
     f = open(solver_dir + "/utils.h", "a")
     f.write("#ifndef UTILS_H\n")
@@ -179,15 +192,10 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q):
         f.write("   work.q[%i] = %d;\n" % (i, q[i]))
     f.write("\n")
 
-    # Temporary code to set the NT scaling matrix to test ldl.
-    for j in range(m):
-        for i in range(m):
-            if (i < 3 and j < 3 and i == j):
-                f.write("   work.W[%i] = -1.0;\n" % (j*m + i))
-            elif (i >= 3 and j >= 3):
-                f.write("   work.W[%i] = -1.0;\n" % (j*m + i))
-            else:
-                f.write("   work.W[%i] = 0.0;\n" % (j*m + i))
+    # Temporary code to set all nonzero elements in the NT scaling matrix to -1 to test ldl.
+    for i in range(m*m):
+        if (Wsparse2dense[i] >= 0):
+            f.write("   work.W[%i] = -1.0;\n" % Wsparse2dense[i])
 
     f.write("\n")
     f.write("}")
