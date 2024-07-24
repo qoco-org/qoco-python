@@ -19,7 +19,7 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, reg, perm, Wsparse2dense):
         else:
             # need to get index of P[i,j] in the data array for P.
             dataidx = get_data_idx(P, i, j)
-            f.write("work.P[%d]" % dataidx)
+            f.write("work->P[%d]" % dataidx)
         if (i == j):
             f.write(" + %f" % reg)
     
@@ -35,7 +35,7 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, reg, perm, Wsparse2dense):
         else:
             # need to get index of A[row,col] in the data array for A.
             dataidx = get_data_idx(A, row, col)
-            f.write("work.A[%d]" % dataidx)
+            f.write("work->A[%d]" % dataidx)
 
     # G' block    
     elif (i < n and j >= n + p and j < n + p + m):
@@ -49,7 +49,7 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, reg, perm, Wsparse2dense):
         else:
             # need to get index of A[row,col] in the data array for A.
             dataidx = get_data_idx(G, row, col)
-            f.write("work.G[%d]" % dataidx)
+            f.write("work->G[%d]" % dataidx)
     
     # -reg * I block.
     elif (i >= n and i < n + p and j >= n and j < n + p):
@@ -79,7 +79,7 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, reg, perm, Wsparse2dense):
             row = col
             col = temp
 
-        f.write("work.W[%d]" % Wsparse2dense[col * m + row])
+        f.write("work->W[%d]" % Wsparse2dense[col * m + row])
 
 def get_data_idx(M, i, j):
     for dataidx in range(M.indptr[j], M.indptr[j+1]):
