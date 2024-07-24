@@ -1,5 +1,5 @@
 # Writes the 1D array index of the (i,j) element of the KKT matrix [P+reg*I A' G';A -reg*I 0;G 0 -W'W]
-def write_Kelem(f, i, j, n, m, p, P, A, G, reg, perm, Wsparse2dense):
+def write_Kelem(f, i, j, n, m, p, P, A, G, perm, Wsparse2dense):
 
     # Row and column to access within KKT matrix.
     i = perm[i]
@@ -21,7 +21,7 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, reg, perm, Wsparse2dense):
             dataidx = get_data_idx(P, i, j)
             f.write("work->P[%d]" % dataidx)
         if (i == j):
-            f.write(" + %f" % reg)
+            f.write(" + work->kkt_reg")
     
     # A' block    
     elif (i < n and j >= n and j < n + p):
@@ -61,7 +61,7 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, reg, perm, Wsparse2dense):
         if row != col:
             f.write("0")
         else:
-            f.write("-%f" % reg)
+            f.write("-work->kkt_reg")
 
     # Accessing the (2,3) block of the KKT matrix.
     elif (i >= n and i < n + p and j >= n + p and j < n + m + p):

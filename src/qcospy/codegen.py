@@ -50,7 +50,7 @@ def _generate_solver(n, m, p, P, c, A, b, G, h, l, nsoc, q, output_dir, name="qc
 
     generate_cmakelists(solver_dir)
     generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, L.nnz, Wnnz)
-    Lsparse2dense = generate_ldl(n, m, p, P, A, G, perm, reg, Lidx, Wsparse2dense, solver_dir)
+    Lsparse2dense = generate_ldl(n, m, p, P, A, G, perm, Lidx, Wsparse2dense, solver_dir)
     generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2dense)
     generate_solver(solver_dir)
     generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q)
@@ -89,11 +89,12 @@ def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz, Wnnz):
     f.write("   double L[%i];\n" % (Lnnz))
     f.write("   double D[%i];\n" % (n + m + p))
     f.write("   double W[%i];\n" % Wnnz)
+    f.write("   double kkt_reg;\n")
     f.write("} Workspace;\n\n")
     f.write("#endif")
     f.close()
 
-def generate_ldl(n, m, p, P, A, G, perm, reg, Lidx, Wsparse2dense, solver_dir):
+def generate_ldl(n, m, p, P, A, G, perm, Lidx, Wsparse2dense, solver_dir):
     f = open(solver_dir + "/ldl.h", "a")
     f.write("#ifndef LDL_H\n")
     f.write("#define LDL_H\n\n")
@@ -118,7 +119,7 @@ def generate_ldl(n, m, p, P, A, G, perm, reg, Lidx, Wsparse2dense, solver_dir):
     for j in range(N):
         # D update.
         f.write("   work->D[%d] = " % j)
-        write_Kelem(f, j, j, n, m, p, P, A, G, reg, perm, Wsparse2dense)
+        write_Kelem(f, j, j, n, m, p, P, A, G, perm, Wsparse2dense)
         for k in range(j):
             if (Lidx[k * N + j]):
                 f.write(" - work->D[%i] * " % k)
@@ -130,7 +131,7 @@ def generate_ldl(n, m, p, P, A, G, perm, reg, Lidx, Wsparse2dense, solver_dir):
             if (Lidx[j * N + i]):
                 Lsparse2dense[j * N + i] = Lnnz
                 f.write("   work->L[%i] = " % (Lnnz))
-                write_Kelem(f, j, i, n, m, p, P, A, G, reg, perm, Wsparse2dense)
+                write_Kelem(f, j, i, n, m, p, P, A, G, perm, Wsparse2dense)
                 for k in range(j):
                     if (Lidx[k * N + i] and Lidx[k * N + j]):
                         f.write(" - work->L[%i] * work->L[%i] * work->D[%i]" % (Lsparse2dense[k * N + i], Lsparse2dense[k * N + j], k))
@@ -197,6 +198,7 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
         if (Wsparse2dense[i] >= 0):
             f.write("   work->W[%i] = -1.0;\n" % Wsparse2dense[i])
 
+    f.write("   work->kkt_reg = 1;\n")
     f.write("\n")
     f.write("}")
     f.close()
