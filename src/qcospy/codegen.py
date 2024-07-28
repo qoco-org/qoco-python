@@ -146,7 +146,7 @@ def generate_ldl(n, m, p, P, A, G, perm, Lidx, Wsparse2dense, solver_dir):
 
     f.write("void tri_solve(Workspace* work){\n")
     for i in range(N):
-        f.write("   work->xyzbuff[%i] = work->kkt_rhs[%i]" % (i, i))
+        f.write("   work->xyzbuff[%i] = work->kkt_rhs[%i]" % (i, perm[i]))
         for j in range(i):
             if (Lidx[j * N + i]):
                 f.write(" - work->L[%i] * work->xyzbuff[%i]" % (Lsparse2dense[j * N + i], j))
@@ -156,10 +156,10 @@ def generate_ldl(n, m, p, P, A, G, perm, Lidx, Wsparse2dense, solver_dir):
         f.write("   work->xyzbuff[%i] /= work->D[%i];\n" % (i, i))
 
     for i in range(N-1, -1, -1):
-        f.write("   work->xyz[%i] = work->xyzbuff[%i]" % (i, i))
+        f.write("   work->xyz[%i] = work->xyzbuff[%i]" % (perm[i], i))
         for j in range(i+1, N):
             if (Lidx[i * N + j]):
-                f.write(" - work->L[%i] * work->xyz[%i]" % (Lsparse2dense[i * N + j], j))
+                f.write(" - work->L[%i] * work->xyz[%i]" % (Lsparse2dense[i * N + j], perm[j]))
         f.write(";\n")
     f.write("}")
 
