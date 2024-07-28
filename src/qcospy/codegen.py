@@ -89,6 +89,9 @@ def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz, Wnnz):
     f.write("   double L[%i];\n" % (Lnnz))
     f.write("   double D[%i];\n" % (n + m + p))
     f.write("   double W[%i];\n" % Wnnz)
+    f.write("   double kkt_rhs[%i];\n" % (n + m + p))
+    f.write("   double xyz[%i];\n" % (n + m + p))
+    f.write("   double xyzbuff[%i];\n" % (n + m + p))
     f.write("   double kkt_reg;\n")
     f.write("} Workspace;\n\n")
     f.write("#endif")
@@ -101,6 +104,7 @@ def generate_ldl(n, m, p, P, A, G, perm, Lidx, Wsparse2dense, solver_dir):
     f.write("#include \"workspace.h\"\n\n")
 
     f.write("void ldl(Workspace* work);\n")
+    f.write("void tri_solve(Workspace* work);\n")
     f.write("#endif")
     f.close()
 
@@ -138,7 +142,27 @@ def generate_ldl(n, m, p, P, A, G, perm, Lidx, Wsparse2dense, solver_dir):
                 f.write(";\n")
                 f.write("   work->L[%i] /= work->D[%i];\n" % (Lnnz, j))
                 Lnnz += 1
+    f.write("}\n\n")
+
+    f.write("void tri_solve(Workspace* work){\n")
+    for i in range(N):
+        f.write("   work->xyzbuff[%i] = work->kkt_rhs[%i]" % (i, i))
+        for j in range(i):
+            if (Lidx[j * N + i]):
+                f.write(" - work->L[%i] * work->xyzbuff[%i]" % (Lsparse2dense[j * N + i], j))
+        f.write(";\n")
+
+    for i in range(N):
+        f.write("   work->xyzbuff[%i] /= work->D[%i];\n" % (i, i))
+
+    for i in range(N-1, -1, -1):
+        f.write("   work->xyz[%i] = work->xyzbuff[%i]" % (i, i))
+        for j in range(i+1, N):
+            if (Lidx[i * N + j]):
+                f.write(" - work->L[%i] * work->xyz[%i]" % (Lsparse2dense[i * N + j], j))
+        f.write(";\n")
     f.write("}")
+
     f.close()
     return Lsparse2dense
 
@@ -197,6 +221,9 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     for i in range(m*m):
         if (Wsparse2dense[i] >= 0):
             f.write("   work->W[%i] = -1.0;\n" % Wsparse2dense[i])
+    
+    for i in range(n + m + p):
+        f.write("   work->kkt_rhs[%i] = 1.0;\n" % i)
 
     f.write("   work->kkt_reg = 1;\n")
     f.write("\n")
@@ -225,6 +252,7 @@ def generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q):
     f.write("   Workspace work;\n")
     f.write("   load_data(&work);\n")
     f.write("   ldl(&work);\n")
+    f.write("   tri_solve(&work);\n")
     f.write("   printf(\"D: {\");")
     f.write("   for(int i = 0; i < work.n + work.m + work.p; ++i){\n")
     f.write("   printf(\"%f, \", work.D[i]);\n")
@@ -236,5 +264,13 @@ def generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q):
     f.write("   printf(\"%f\\n\", work.L[i]);\n")
     f.write("   }\n")
     f.write("   printf(\"}\\n\");\n")
+
+    f.write("   printf(\"x: {\");")
+    f.write("   for(int i = 0; i < work.n + work.m + work.p; ++i){\n")
+    f.write("   printf(\"%f, \", work.xyz[i]);\n")
+    f.write("   }\n")
+    f.write("   printf(\"}\\n\");\n")
+
     f.write("}")
+
     f.close()
