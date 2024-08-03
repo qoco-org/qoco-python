@@ -27,7 +27,7 @@ def _generate_solver(n, m, p, P, c, A, b, G, h, l, nsoc, q, output_dir, name="qc
     Wnnz = int((W.nnz - m) / 2 + m)
     Wnnz_cnt = 0
 
-    # Maps sparse 1D index (1,...,m^2) of W to its sparse index (1,...,Wnnz). Note that accessing an upper triangular element of W returns -1.
+    # Maps sparse 1D index (1,...,m^2) of W to its sparse index (1,...,Wnnz). Note that accessing an lower triangular element of W returns -1.
     Wsparse2dense = -np.ones((m*m,1))
     for j in range(m):
         for i in range(m):
@@ -50,9 +50,10 @@ def _generate_solver(n, m, p, P, c, A, b, G, h, l, nsoc, q, output_dir, name="qc
 
     generate_cmakelists(solver_dir)
     generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, L.nnz, Wnnz)
-    Lsparse2dense = generate_ldl(n, m, p, P, A, G, perm, Lidx, Wsparse2dense, solver_dir)
+    Lsparse2dense = generate_ldl(solver_dir, n, m, p, P, A, G, perm, Lidx, Wsparse2dense)
+    generate_cone(solver_dir)
     generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2dense)
-    generate_solver(solver_dir)
+    generate_solver(solver_dir, m, Wsparse2dense)
     generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q)
 
 def generate_cmakelists(solver_dir):
@@ -97,7 +98,7 @@ def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz, Wnnz):
     f.write("#endif")
     f.close()
 
-def generate_ldl(n, m, p, P, A, G, perm, Lidx, Wsparse2dense, solver_dir):
+def generate_ldl(solver_dir, n, m, p, P, A, G, perm, Lidx, Wsparse2dense):
     f = open(solver_dir + "/ldl.h", "a")
     f.write("#ifndef LDL_H\n")
     f.write("#define LDL_H\n\n")
@@ -166,6 +167,30 @@ def generate_ldl(n, m, p, P, A, G, perm, Lidx, Wsparse2dense, solver_dir):
     f.close()
     return Lsparse2dense
 
+def generate_cone(solver_dir):
+    # Write header.
+    f = open(solver_dir + "/cone.h", "a")
+    f.write("#ifndef CONE_H\n")
+    f.write("#define CONE_H\n\n")
+
+    f.write("double soc_residual(double* u, int n);\n")
+    f.write("double soc_residual2(double* u, int n);\n")
+    f.write("#endif")
+    f.close()
+
+    # Write source.
+    f = open(solver_dir + "/cone.c", "a")
+    f.write("#include \"cone.h\"\n\n")
+    f.write("double soc_residual(double* u, int n){\n")
+    f.write("   double res = 0;\n")
+    f.write("   for (int i = 0; i < n; ++i) {\n")
+    f.write("       res += u[i] * u[i];\n")
+    f.write("   }\n")
+    f.write("   res = sqrt(res) - u[0];\n")
+    f.write("   return res;\n")
+    f.write("}\n")
+    f.close()
+
 def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2dense):
     # Write header.
     f = open(solver_dir + "/utils.h", "a")
@@ -222,26 +247,53 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
         if (Wsparse2dense[i] >= 0):
             f.write("   work->W[%i] = -1.0;\n" % Wsparse2dense[i])
     
+    # Set rhs of kkt to all ones to test ldl factor and solve.
     for i in range(n + m + p):
         f.write("   work->kkt_rhs[%i] = 1.0;\n" % i)
 
-    f.write("   work->kkt_reg = 1;\n")
+    f.write("   work->kkt_reg = 1e-7;\n")
     f.write("\n")
     f.write("}")
     f.close()
 
-def generate_solver(solver_dir):
+def generate_solver(solver_dir, m, Wsparse2dense):
     f = open(solver_dir + "/qcos_custom.h", "a")
     f.write("#ifndef QCOS_CUSTOM_H\n")
     f.write("#define QCOS_CUSTOM_H\n\n")
     f.write("#include \"ldl.h\"\n")
     f.write("#include \"utils.h\"\n")
-    f.write("#include \"workspace.h\"\n")
+    f.write("#include \"workspace.h\"\n\n")
+    f.write("void qcos_custom_solve(Workspace* work);\n")
+    f.write("void initialize(Workspace* work);\n")
     f.write("#endif")
     f.close()
 
     f = open(solver_dir + "/qcos_custom.c", "a")
     f.write("#include \"qcos_custom.h\"\n\n")
+    f.write("void qcos_custom_solve(Workspace* work){\n")
+    # f.write("   initialize(work);\n")
+    f.write("}\n\n")
+    f.write("void initialize(Workspace* work){\n")
+    f.write("   // Set NT block to -I.\n")
+    for i in range(m**2):
+        if (Wsparse2dense[i] != -1):
+            f.write("   work->W[%i] = 0.0;\n" % Wsparse2dense[i])
+    for i in range(m):
+        f.write("   work->W[%i] = -1.0;\n" % Wsparse2dense[i * m + i])
+    
+    f.write("\n   // kkt_rhs = [-c;b;h].\n")
+    f.write("   for(int i = 0; i < work->n; ++i){\n")
+    f.write("       work->kkt_rhs[i] = -work->c[i];\n")
+    f.write("   }\n")
+    f.write("   for(int i = 0; i < work->p; ++i){\n")
+    f.write("       work->kkt_rhs[work->n + i] = work->b[i];\n")
+    f.write("   }\n")
+    f.write("   for(int i = 0; i < work->m; ++i){\n")
+    f.write("       work->kkt_rhs[work->n + work->p + i] = work->h[i];\n")
+    f.write("   }\n\n")
+    f.write("   ldl(work);\n")
+    f.write("   tri_solve(work);\n")
+    f.write("}\n")
     f.close()
 
 def generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q):
@@ -251,20 +303,7 @@ def generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q):
     f.write("int main(){\n")
     f.write("   Workspace work;\n")
     f.write("   load_data(&work);\n")
-    f.write("   ldl(&work);\n")
-    f.write("   tri_solve(&work);\n")
-    f.write("   printf(\"D: {\");")
-    f.write("   for(int i = 0; i < work.n + work.m + work.p; ++i){\n")
-    f.write("   printf(\"%f, \", work.D[i]);\n")
-    f.write("   }\n")
-    f.write("   printf(\"}\\n\");\n")
-
-    f.write("   printf(\"L: {\");")
-    f.write("   for(int i = 0; i < (work.n + work.m + work.p) * (work.n + work.m + work.p); ++i){\n")
-    f.write("   printf(\"%f\\n\", work.L[i]);\n")
-    f.write("   }\n")
-    f.write("   printf(\"}\\n\");\n")
-
+    f.write("   initialize(&work);\n")
     f.write("   printf(\"x: {\");")
     f.write("   for(int i = 0; i < work.n + work.m + work.p; ++i){\n")
     f.write("   printf(\"%f, \", work.xyz[i]);\n")
