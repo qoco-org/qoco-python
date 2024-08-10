@@ -51,7 +51,7 @@ def _generate_solver(n, m, p, P, c, A, b, G, h, l, nsoc, q, output_dir, name="qc
     generate_cmakelists(solver_dir)
     generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, L.nnz, Wnnz)
     Lsparse2dense = generate_ldl(solver_dir, n, m, p, P, A, G, perm, Lidx, Wsparse2dense)
-    generate_cone(solver_dir)
+    generate_cone(solver_dir, m)
     generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense)
     generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2dense)
     generate_solver(solver_dir, m, Wsparse2dense)
@@ -101,6 +101,7 @@ def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz, Wnnz):
     f.write("   double xyz[%i];\n" % (n + m + p))
     f.write("   double xyzbuff[%i];\n" % (n + m + p))
     f.write("   double kkt_reg;\n")
+    f.write("   double mu;\n")
     f.write("} Workspace;\n\n")
     f.write("#endif")
     f.close()
@@ -174,7 +175,7 @@ def generate_ldl(solver_dir, n, m, p, P, A, G, perm, Lidx, Wsparse2dense):
     f.close()
     return Lsparse2dense
 
-def generate_cone(solver_dir):
+def generate_cone(solver_dir, m):
     # Write header.
     f = open(solver_dir + "/cone.h", "a")
     f.write("#ifndef CONE_H\n")
@@ -185,6 +186,7 @@ def generate_cone(solver_dir):
     f.write("double soc_residual(double* u, int n);\n")
     f.write("double cone_residual(double* u, int l, int nsoc, int* q);\n")
     f.write("void bring2cone(double* u, int l, int nsoc, int* q);\n")
+    f.write("double compute_mu(Workspace* work);\n")
     f.write("#endif")
     f.close()
 
@@ -236,6 +238,13 @@ def generate_cone(solver_dir):
     f.write("      }\n")
     f.write("   }\n")
     f.write("}\n")
+
+    f.write("double compute_mu(Workspace* work){\n")
+    if (m == 0):
+        f.write("   work->mu = 0.0;\n")
+    else:
+        f.write("   work->mu = (dot(work->s, work->z, work->m) / work->m);\n")
+    f.write("}")
     f.close()
 
 def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
@@ -294,6 +303,7 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("void load_data(Workspace* work);\n")
     f.write("void copy_arrayf(double* x, double* y, int n);\n")
     f.write("void copy_and_negate_arrayf(double* x, double* y, int n);\n")
+    f.write("double dot(double* x, double* y, int n);\n")
     f.write("#endif")
     f.close()
 
@@ -346,6 +356,7 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
         f.write("   work->kkt_rhs[%i] = 1.0;\n" % i)
 
     f.write("   work->kkt_reg = 1e-7;\n")
+    f.write("   work->mu = 0.0;\n")
     f.write("\n")
     f.write("}\n\n")
 
@@ -359,7 +370,15 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("   for (int i = 0; i < n; ++i) {\n")
     f.write("      y[i] = -x[i];\n")
     f.write("   }\n")
-    f.write("}")
+    f.write("}\n\n")
+
+    f.write("double dot(double* x, double* y, int n){\n")
+    f.write("   double ans = 0;\n")
+    f.write("      for (int i = 0; i < n; ++i){\n")
+    f.write("         ans += x[i] * y[i];\n")
+    f.write("      }\n")
+    f.write("   return ans;\n")
+    f.write("}\n")
     f.close()
 
 def generate_solver(solver_dir, m, Wsparse2dense):
@@ -409,6 +428,7 @@ def generate_solver(solver_dir, m, Wsparse2dense):
     f.write("   initialize_ipm(work);\n")
     f.write("   for (int i = 1; i < 2; ++i) {\n")
     f.write("      compute_kkt_residual(work);\n")
+    f.write("      compute_mu(work);\n")
     f.write("   }\n")
     f.write("}\n\n")
     f.close()
@@ -430,6 +450,8 @@ def generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q):
     f.write("   for(int i = 0; i < work.n + work.m + work.p; ++i){\n")
     f.write("   printf(\"%f, \", work.kkt_res[i]);\n")
     f.write("   }\n")
+
+    f.write("   printf(\"mu: %f\", work.mu);\n")
 
     f.write("   printf(\"\\nx: {\");")
     f.write("   for(int i = 0; i < work.n; ++i){\n")
