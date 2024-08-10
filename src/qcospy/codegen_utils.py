@@ -1,5 +1,5 @@
 # Writes the 1D array index of the (i,j) element of the KKT matrix [P+reg*I A' G';A -reg*I 0;G 0 -W'W]
-def write_Kelem(f, i, j, n, m, p, P, A, G, perm, Wsparse2dense):
+def write_Kelem(f, i, j, n, m, p, P, A, G, perm, Wsparse2dense, reg):
 
     # Row and column to access within KKT matrix.
     i = perm[i]
@@ -15,12 +15,13 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, perm, Wsparse2dense):
     if (i < n and j < n):
         # Check if element is nonzero. TODO: There should be a better way to check if an element is nonzero.
         if P[i,j] == 0.0:
-            f.write("0")
+            # f.write("0")
+            return False
         else:
             # need to get index of P[i,j] in the data array for P.
             dataidx = get_data_idx(P, i, j)
             f.write("work->P[%d]" % dataidx)
-        if (i == j):
+        if (i == j and reg):
             f.write(" + work->kkt_reg")
     
     # A' block    
@@ -31,7 +32,8 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, perm, Wsparse2dense):
 
         # Check if element is nonzero. TODO: There should be a better way to check if an element is nonzero.
         if A[row,col] == 0.0:
-            f.write("0")
+            # f.write("0")
+            return False
         else:
             # need to get index of A[row,col] in the data array for A.
             dataidx = get_data_idx(A, row, col)
@@ -45,7 +47,8 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, perm, Wsparse2dense):
 
         # Check if element is nonzero.  TODO: There should be a better way to check if an element is nonzero.
         if G[row,col] == 0.0:
-            f.write("0")
+            # f.write("0")
+            return False
         else:
             # need to get index of A[row,col] in the data array for A.
             dataidx = get_data_idx(G, row, col)
@@ -59,13 +62,17 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, perm, Wsparse2dense):
 
         # Check if element is nonzero.
         if row != col:
-            f.write("0")
-        else:
+            # f.write("0")
+            return False
+        elif (reg):
             f.write("-work->kkt_reg")
+        else:
+            return False
 
     # Accessing the (2,3) block of the KKT matrix.
     elif (i >= n and i < n + p and j >= n + p and j < n + m + p):
-        f.write("0")
+        # f.write("0")
+        return False
 
     # Nesterov-Todd block.
     elif (i >= n + p and i < n + p + m and j >= n + p and j < n + m + p):
@@ -78,8 +85,12 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, perm, Wsparse2dense):
             temp = row
             row = col
             col = temp
-
-        f.write("work->W[%d]" % Wsparse2dense[col * m + row])
+        if (Wsparse2dense[col * m + row] != -1):
+            f.write("work->W[%d]" % Wsparse2dense[col * m + row])
+        else:
+            # f.write("0")
+            return False
+    return True
 
 def get_data_idx(M, i, j):
     for dataidx in range(M.indptr[j], M.indptr[j+1]):

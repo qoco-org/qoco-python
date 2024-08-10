@@ -52,6 +52,7 @@ def _generate_solver(n, m, p, P, c, A, b, G, h, l, nsoc, q, output_dir, name="qc
     generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, L.nnz, Wnnz)
     Lsparse2dense = generate_ldl(solver_dir, n, m, p, P, A, G, perm, Lidx, Wsparse2dense)
     generate_cone(solver_dir)
+    generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense)
     generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2dense)
     generate_solver(solver_dir, m, Wsparse2dense)
     generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q)
@@ -63,7 +64,7 @@ def generate_cmakelists(solver_dir):
     f.write("project(qcos_custom)\n\n")
     f.write("# Build qcos_custom shared library.\n")
     f.write("add_library(qcos_custom SHARED)\n")
-    f.write("target_sources(qcos_custom PRIVATE qcos_custom.c cone.c utils.c ldl.c)\n\n")
+    f.write("target_sources(qcos_custom PRIVATE qcos_custom.c cone.c utils.c ldl.c kkt.c)\n\n")
     f.write("target_link_libraries(qcos_custom m)")
     f.write("# Build qcos demo.\n")
     f.write("add_executable(runtest runtest.c)\n")
@@ -96,6 +97,7 @@ def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz, Wnnz):
     f.write("   double D[%i];\n" % (n + m + p))
     f.write("   double W[%i];\n" % Wnnz)
     f.write("   double kkt_rhs[%i];\n" % (n + m + p))
+    f.write("   double kkt_res[%i];\n" % (n + m + p))
     f.write("   double xyz[%i];\n" % (n + m + p))
     f.write("   double xyzbuff[%i];\n" % (n + m + p))
     f.write("   double kkt_reg;\n")
@@ -129,7 +131,7 @@ def generate_ldl(solver_dir, n, m, p, P, A, G, perm, Lidx, Wsparse2dense):
     for j in range(N):
         # D update.
         f.write("   work->D[%d] = " % j)
-        write_Kelem(f, j, j, n, m, p, P, A, G, perm, Wsparse2dense)
+        write_Kelem(f, j, j, n, m, p, P, A, G, perm, Wsparse2dense, True)
         for k in range(j):
             if (Lidx[k * N + j]):
                 f.write(" - work->D[%i] * " % k)
@@ -141,7 +143,7 @@ def generate_ldl(solver_dir, n, m, p, P, A, G, perm, Lidx, Wsparse2dense):
             if (Lidx[j * N + i]):
                 Lsparse2dense[j * N + i] = Lnnz
                 f.write("   work->L[%i] = " % (Lnnz))
-                write_Kelem(f, j, i, n, m, p, P, A, G, perm, Wsparse2dense)
+                write_Kelem(f, j, i, n, m, p, P, A, G, perm, Wsparse2dense, True)
                 for k in range(j):
                     if (Lidx[k * N + i] and Lidx[k * N + j]):
                         f.write(" - work->L[%i] * work->L[%i] * work->D[%i]" % (Lsparse2dense[k * N + i], Lsparse2dense[k * N + j], k))
@@ -236,6 +238,52 @@ def generate_cone(solver_dir):
     f.write("}\n")
     f.close()
 
+def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
+    # Write header.
+    f = open(solver_dir + "/kkt.h", "a")
+    f.write("#ifndef KKT_H\n")
+    f.write("#define KKT_H\n\n")
+    f.write("#include \"workspace.h\"\n\n")
+    f.write("void compute_kkt_residual(Workspace* work);\n")
+    f.write("#endif")
+    f.close()
+
+    # Write source.
+    N = n + m + p
+    f = open(solver_dir + "/kkt.c", "a")
+    f.write("#include \"kkt.h\"\n\n")
+    f.write("void compute_kkt_residual(Workspace* work){\n")
+
+    f.write("   // Zero out NT Block.\n")
+    for i in range(m**2):
+        if (Wsparse2dense[i] != -1):
+            f.write("   work->W[%i] = 0.0;\n" % Wsparse2dense[i])
+
+    for i in range(N):
+        f.write("   work->kkt_res[%i] = " % i)
+        for j in range(N):
+            if (write_Kelem(f, i, j, n, m, p, P, A, G, np.linspace(0, N-1, N, dtype=np.int32), Wsparse2dense, False)):
+                if (j < n):
+                    f.write(" * work->x[%i]" % j)
+                elif (j >= n and j < n + p):
+                    f.write(" * work->y[%i]" % (j - n))
+                elif (j >= n + p and j < n + m + p):
+                    f.write(" * work->z[%i]" % (j - n - p))
+                f.write(" + ")
+        
+        # Add [c;-b;s-h]
+        if (i < n):
+            f.write(" work->c[%i]" % i)
+        elif (i >= n and i < n + p):
+            f.write(" - work->b[%i]" % (i - n))
+        elif (i >= n + p and i < n + m + p):
+            f.write("work->s[%i] - work->h[%i]" % (i - n - p, i - n - p))
+        else:
+            raise ValueError("Should not happen.")
+        f.write(";\n")
+    f.write("}")
+    f.close()
+
 def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2dense):
     # Write header.
     f = open(solver_dir + "/utils.h", "a")
@@ -319,20 +367,17 @@ def generate_solver(solver_dir, m, Wsparse2dense):
     f.write("#ifndef QCOS_CUSTOM_H\n")
     f.write("#define QCOS_CUSTOM_H\n\n")
     f.write("#include \"cone.h\"\n")
+    f.write("#include \"kkt.h\"\n")
     f.write("#include \"ldl.h\"\n")
     f.write("#include \"utils.h\"\n")
     f.write("#include \"workspace.h\"\n\n")
     f.write("void qcos_custom_solve(Workspace* work);\n")
-    f.write("void initialize(Workspace* work);\n")
     f.write("#endif")
     f.close()
 
     f = open(solver_dir + "/qcos_custom.c", "a")
     f.write("#include \"qcos_custom.h\"\n\n")
-    f.write("void qcos_custom_solve(Workspace* work){\n")
-    # f.write("   initialize(work);\n")
-    f.write("}\n\n")
-    f.write("void initialize(Workspace* work){\n")
+    f.write("void initialize_ipm(Workspace* work){\n")
     f.write("   // Set NT block to -I.\n")
     for i in range(m**2):
         if (Wsparse2dense[i] != -1):
@@ -358,7 +403,14 @@ def generate_solver(solver_dir, m, Wsparse2dense):
     f.write("   copy_and_negate_arrayf(&work->xyz[work->n + work->p], work->s, work->m);\n")
     f.write("   bring2cone(work->s, work->l, work->nsoc, work->q);\n")
     f.write("   bring2cone(work->z, work->l, work->nsoc, work->q);\n")
-    f.write("}\n")
+    f.write("}\n\n")
+
+    f.write("void qcos_custom_solve(Workspace* work){\n")
+    f.write("   initialize_ipm(work);\n")
+    f.write("   for (int i = 1; i < 2; ++i) {\n")
+    f.write("      compute_kkt_residual(work);\n")
+    f.write("   }\n")
+    f.write("}\n\n")
     f.close()
 
 def generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q):
@@ -368,10 +420,15 @@ def generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q):
     f.write("int main(){\n")
     f.write("   Workspace work;\n")
     f.write("   load_data(&work);\n")
-    f.write("   initialize(&work);\n")
+    f.write("   qcos_custom_solve(&work);\n")
     f.write("   printf(\"xyz: {\");")
     f.write("   for(int i = 0; i < work.n + work.m + work.p; ++i){\n")
     f.write("   printf(\"%f, \", work.xyz[i]);\n")
+    f.write("   }\n")
+
+    f.write("   printf(\"\\nkkt_res: {\");")
+    f.write("   for(int i = 0; i < work.n + work.m + work.p; ++i){\n")
+    f.write("   printf(\"%f, \", work.kkt_res[i]);\n")
     f.write("   }\n")
 
     f.write("   printf(\"\\nx: {\");")
