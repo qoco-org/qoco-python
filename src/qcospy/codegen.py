@@ -100,8 +100,11 @@ def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz, Wnnz):
     f.write("   double kkt_res[%i];\n" % (n + m + p))
     f.write("   double xyz[%i];\n" % (n + m + p))
     f.write("   double xyzbuff[%i];\n" % (n + m + p))
+    f.write("   double mu;\n\n")
     f.write("   double kkt_reg;\n")
-    f.write("   double mu;\n")
+    f.write("   double eps_gap;\n")
+    f.write("   double eps_feas;\n")
+    f.write("   unsigned char solved;\n")
     f.write("} Workspace;\n\n")
     f.write("#endif")
     f.close()
@@ -186,7 +189,7 @@ def generate_cone(solver_dir, m):
     f.write("double soc_residual(double* u, int n);\n")
     f.write("double cone_residual(double* u, int l, int nsoc, int* q);\n")
     f.write("void bring2cone(double* u, int l, int nsoc, int* q);\n")
-    f.write("double compute_mu(Workspace* work);\n")
+    f.write("void compute_mu(Workspace* work);\n")
     f.write("#endif")
     f.close()
 
@@ -239,7 +242,7 @@ def generate_cone(solver_dir, m):
     f.write("   }\n")
     f.write("}\n")
 
-    f.write("double compute_mu(Workspace* work){\n")
+    f.write("void compute_mu(Workspace* work){\n")
     if (m == 0):
         f.write("   work->mu = 0.0;\n")
     else:
@@ -299,11 +302,13 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("#ifndef UTILS_H\n")
     f.write("#define UTILS_H\n\n")
     f.write("#include \"workspace.h\"\n\n")
+    f.write("#define qcos_abs(x) ((x)<0 ? -(x) : (x))\n")
     f.write("#define qcos_max(a, b) (((a) > (b)) ? (a) : (b))\n\n")
     f.write("void load_data(Workspace* work);\n")
     f.write("void copy_arrayf(double* x, double* y, int n);\n")
     f.write("void copy_and_negate_arrayf(double* x, double* y, int n);\n")
     f.write("double dot(double* x, double* y, int n);\n")
+    f.write("unsigned char check_stopping(Workspace* work);\n")
     f.write("#endif")
     f.close()
 
@@ -354,9 +359,11 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     # Set rhs of kkt to all ones to test ldl factor and solve.
     for i in range(n + m + p):
         f.write("   work->kkt_rhs[%i] = 1.0;\n" % i)
-
-    f.write("   work->kkt_reg = 1e-7;\n")
     f.write("   work->mu = 0.0;\n")
+    f.write("   work->kkt_reg = 1e-7;\n")
+    f.write("   work->eps_gap = 1e-7;\n")
+    f.write("   work->eps_feas = 1e-7;\n")
+    f.write("   work->solved = 0;\n")
     f.write("\n")
     f.write("}\n\n")
 
@@ -378,6 +385,17 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("         ans += x[i] * y[i];\n")
     f.write("      }\n")
     f.write("   return ans;\n")
+    f.write("}\n")
+
+    f.write("unsigned char check_stopping(Workspace* work){\n")
+    f.write("   double res = 1e3;\n")
+    f.write("   for (int i = 0; i < work->n + work->m + work->p; ++i){\n")
+    f.write("      res = qcos_max(res, qcos_abs(work->kkt_res[i]));\n")
+    f.write("   }\n")
+    f.write("   if (res < work->eps_feas && (work->mu * work->m) < work->eps_gap) {\n")
+    f.write("      return 1;\n")
+    f.write("   }\n")
+    f.write("   return 0;\n")
     f.write("}\n")
     f.close()
 
@@ -429,6 +447,10 @@ def generate_solver(solver_dir, m, Wsparse2dense):
     f.write("   for (int i = 1; i < 2; ++i) {\n")
     f.write("      compute_kkt_residual(work);\n")
     f.write("      compute_mu(work);\n")
+    f.write("      if (check_stopping(work)) {\n")
+    f.write("         work->solved = 1;\n")
+    f.write("         return;\n")
+    f.write("      }\n")
     f.write("   }\n")
     f.write("}\n\n")
     f.close()
