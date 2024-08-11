@@ -51,7 +51,7 @@ def _generate_solver(n, m, p, P, c, A, b, G, h, l, nsoc, q, output_dir, name="qc
     generate_cmakelists(solver_dir)
     generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, L.nnz, Wnnz)
     Lsparse2dense = generate_ldl(solver_dir, n, m, p, P, A, G, perm, Lidx, Wsparse2dense)
-    generate_cone(solver_dir, m, Wnnz)
+    generate_cone(solver_dir, m, Wnnz, Wsparse2dense)
     generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense)
     generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2dense)
     generate_solver(solver_dir, m, Wsparse2dense)
@@ -182,7 +182,7 @@ def generate_ldl(solver_dir, n, m, p, P, A, G, perm, Lidx, Wsparse2dense):
     f.close()
     return Lsparse2dense
 
-def generate_cone(solver_dir, m, Wnnz):
+def generate_cone(solver_dir, m, Wnnz, Wsparse2dense):
     # Write header.
     f = open(solver_dir + "/cone.h", "a")
     f.write("#ifndef CONE_H\n")
@@ -195,6 +195,7 @@ def generate_cone(solver_dir, m, Wnnz):
     f.write("void bring2cone(double* u, int l, int nsoc, int* q);\n")
     f.write("void compute_mu(Workspace* work);\n")
     f.write("void compute_nt_scaling(Workspace* work);\n")
+    f.write("void compute_WtW(Workspace* work);\n")
     f.write("#endif")
     f.close()
 
@@ -328,6 +329,25 @@ def generate_cone(solver_dir, m, Wnnz):
     f.write("       idx += work->q[i];\n")
     f.write("       nt_idx += (work->q[i] * work->q[i] + work->q[i]) / 2;\n")
     f.write("   }\n")
+    f.write("}\n\n")
+
+    f.write("void compute_WtW(Workspace* work){\n")
+    for i in range(m):
+        for j in range(i, m):
+            if (Wsparse2dense[j * m + i] != -1):
+                f.write("   work->WtW[%i] = " % Wsparse2dense[j * m + i])
+                for k in range(m):
+                    row1 = k
+                    col1 = j
+                    row2 = k
+                    col2 = i
+                    if (col1 < row1):
+                        row1, col1 = col1, row1
+                    if (col2 < row2):
+                        row2, col2 = col2, row2
+                    if (Wsparse2dense[col1 * m + row1] != -1 and Wsparse2dense[col2 * m + row2] != -1):
+                        f.write(" + work->W[%i] * work->W[%i]" % (Wsparse2dense[col1 * m + row1], Wsparse2dense[col2 * m + row2]))
+                f.write(";\n")
     f.write("}\n")
     f.close()
 
@@ -534,7 +554,8 @@ def generate_solver(solver_dir, m, Wsparse2dense):
     f.write("         work->solved = 1;\n")
     f.write("         return;\n")
     f.write("      }\n")
-    f.write("   compute_nt_scaling(work);\n")
+    f.write("      compute_nt_scaling(work);\n")
+    f.write("      compute_WtW(work);\n")
     f.write("   }\n")
     f.write("}\n\n")
     f.close()
@@ -588,6 +609,11 @@ def generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q):
     f.write("   printf(\"\\nWinv: {\");")
     f.write("   for(int i = 0; i < 9; ++i){\n")
     f.write("   printf(\"%f, \", work.Winv[i]);\n")
+    f.write("   }\n")
+
+    f.write("   printf(\"\\nWtW: {\");")
+    f.write("   for(int i = 0; i < 9; ++i){\n")
+    f.write("   printf(\"%f, \", work.WtW[i]);\n")
     f.write("   }\n")
 
     f.write("}")
