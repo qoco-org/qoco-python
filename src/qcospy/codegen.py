@@ -40,6 +40,7 @@ def _generate_solver(n, m, p, P, c, A, b, G, h, l, nsoc, q, output_dir, name="qc
     K = sparse.bmat([[P + reg * sparse.identity(n), A.T, G.T],[A, -reg * sparse.identity(p), None], [G, None, -W]])
     solver = qdldl.Solver(K)
     L, D, perm = solver.factors()
+    print(perm)
 
     N = n + m + p
     Lidx = [False for _ in range(N**2)]
@@ -97,6 +98,7 @@ def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz, Wnnz):
     f.write("   double D[%i];\n" % (n + m + p))
     f.write("   double W[%i];\n" % Wnnz)
     f.write("   double lambda[%i];\n" % m)
+    f.write("   double ubuff1[%i];\n" % m)
     f.write("   double Winv[%i];\n" % Wnnz)
     f.write("   double WtW[%i];\n" % Wnnz)
     f.write("   double kkt_rhs[%i];\n" % (n + m + p))
@@ -198,6 +200,8 @@ def generate_cone(solver_dir, m, Wnnz, Wsparse2dense):
     f.write("void compute_nt_scaling(Workspace* work);\n")
     f.write("void compute_lambda(Workspace* work);\n")
     f.write("void compute_WtW(Workspace* work);\n")
+    f.write("// Computes z = W * x, where W has the same sparsity structure as the Nesterov-Todd scaling matrices.\n")
+    f.write("void nt_multiply(double* W, double* x, double* z);\n")
     f.write("#endif")
     f.close()
 
@@ -349,20 +353,30 @@ def generate_cone(solver_dir, m, Wnnz, Wsparse2dense):
                     if (Wsparse2dense[col1 * m + row1] != -1 and Wsparse2dense[col2 * m + row2] != -1):
                         f.write(" + work->W[%i] * work->W[%i]" % (Wsparse2dense[col1 * m + row1], Wsparse2dense[col2 * m + row2]))
                 f.write(";\n")
+
+    # f.write("   // Negate WtW to prep for KKT solve.")
+    # for i in range(m**2):
+    #     if (Wsparse2dense[i] != -1):
+    #         f.write("   work->WtW[%i] *= -1.0;\n" % Wsparse2dense[i])
     f.write("}\n\n")
 
     f.write("void compute_lambda(Workspace* work) {\n")
+    f.write("   nt_multiply(work->W, work->z, work->lambda);\n")
+    f.write("}\n\n")
+
+    f.write("void nt_multiply(double* W, double* x, double* z) {\n")
     for i in range(m):
-        f.write("   work->lambda[%i] = " % i)
+        f.write("   z[%i] = " % i)
         for j in range(m):
             row = i
             col = j
             if (col < row):
                 row, col = col, row
             if (Wsparse2dense[col * m + row] != -1):
-                f.write(" + work->W[%i] * work->z[%i]" % (Wsparse2dense[col * m + row], j))
+                f.write(" + W[%i] * x[%i]" % (Wsparse2dense[col * m + row], j))
         f.write(";\n")
     f.write("}\n\n")
+
     f.close()
 
 def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
@@ -370,8 +384,12 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
     f = open(solver_dir + "/kkt.h", "a")
     f.write("#ifndef KKT_H\n")
     f.write("#define KKT_H\n\n")
+    f.write("#include \"cone.h\"\n")
+    f.write("#include \"ldl.h\"\n")
     f.write("#include \"workspace.h\"\n\n")
     f.write("void compute_kkt_residual(Workspace* work);\n")
+    f.write("void predictor_corrector(Workspace* work);\n")
+    f.write("void construct_kkt_aff_rhs(Workspace* work);\n")
     f.write("#endif")
     f.close()
 
@@ -408,7 +426,23 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
         else:
             raise ValueError("Should not happen.")
         f.write(";\n")
-    f.write("}")
+    f.write("}\n\n")
+
+    f.write("void predictor_corrector(Workspace* work) {\n")
+    f.write("   ldl(work);\n\n")
+    f.write("   // Construct rhs for affine scaling direction.\n")
+    f.write("   construct_kkt_aff_rhs(work);\n\n")
+    f.write("   // Solve KKT system to get affine scaling direction.\n")
+    f.write("   tri_solve(work);\n")
+    f.write("}\n\n")
+
+    f.write("void construct_kkt_aff_rhs(Workspace* work) {\n")
+    f.write("   copy_and_negate_arrayf(work->kkt_res, work->kkt_rhs, work->n + work->p + work->m);\n")
+    f.write("   nt_multiply(work->W, work->lambda, work->ubuff1);\n")
+    f.write("   for (int i = 0; i < work->m; ++i) {\n")
+    f.write("       work->kkt_rhs[work->n + work->p + i] += work->ubuff1[i];\n")
+    f.write("   }\n")
+    f.write("}\n")
     f.close()
 
 def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2dense):
@@ -513,7 +547,7 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("      return 1;\n")
     f.write("   }\n")
     f.write("   return 0;\n")
-    f.write("}\n")
+    f.write("}\n\n")
     f.close()
 
 def generate_solver(solver_dir, m, Wsparse2dense):
@@ -532,12 +566,12 @@ def generate_solver(solver_dir, m, Wsparse2dense):
     f = open(solver_dir + "/qcos_custom.c", "a")
     f.write("#include \"qcos_custom.h\"\n\n")
     f.write("void initialize_ipm(Workspace* work){\n")
-    f.write("   // Set NT block to -I.\n")
+    f.write("   // Set NT block to I.\n")
     for i in range(m**2):
         if (Wsparse2dense[i] != -1):
             f.write("   work->WtW[%i] = 0.0;\n" % Wsparse2dense[i])
     for i in range(m):
-        f.write("   work->WtW[%i] = -1.0;\n" % Wsparse2dense[i * m + i])
+        f.write("   work->WtW[%i] = 1.0;\n" % Wsparse2dense[i * m + i])
     
     f.write("\n   // kkt_rhs = [-c;b;h].\n")
     f.write("   for(int i = 0; i < work->n; ++i){\n")
@@ -571,6 +605,7 @@ def generate_solver(solver_dir, m, Wsparse2dense):
     f.write("      compute_nt_scaling(work);\n")
     f.write("      compute_lambda(work);\n")
     f.write("      compute_WtW(work);\n")
+    f.write("      predictor_corrector(work);\n")
     f.write("   }\n")
     f.write("}\n\n")
     f.close()
@@ -636,6 +671,20 @@ def generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q):
     f.write("   printf(\"%f, \", work.lambda[i]);\n")
     f.write("   }\n")
 
+    f.write("   printf(\"\\nkkt_rhs: {\");")
+    f.write("   for(int i = 0; i < work.m + work.p + work.n; ++i){\n")
+    f.write("   printf(\"%f, \", work.kkt_rhs[i]);\n")
+    f.write("   }\n")
+
+    f.write("   printf(\"\\nD: {\");")
+    f.write("   for(int i = 0; i < work.m + work.n + work.p; ++i){\n")
+    f.write("   printf(\"%f, \", work.D[i]);\n")
+    f.write("   }\n")
+
+    f.write("   printf(\"\\nL: {\");")
+    f.write("   for(int i = 0; i < 13; ++i){\n")
+    f.write("   printf(\"%f, \", work.L[i]);\n")
+    f.write("   }\n")
     f.write("}")
 
     f.close()
