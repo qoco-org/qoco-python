@@ -96,6 +96,7 @@ def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz, Wnnz):
     f.write("   double L[%i];\n" % (Lnnz))
     f.write("   double D[%i];\n" % (n + m + p))
     f.write("   double W[%i];\n" % Wnnz)
+    f.write("   double lambda[%i];\n" % m)
     f.write("   double Winv[%i];\n" % Wnnz)
     f.write("   double WtW[%i];\n" % Wnnz)
     f.write("   double kkt_rhs[%i];\n" % (n + m + p))
@@ -195,6 +196,7 @@ def generate_cone(solver_dir, m, Wnnz, Wsparse2dense):
     f.write("void bring2cone(double* u, int l, int nsoc, int* q);\n")
     f.write("void compute_mu(Workspace* work);\n")
     f.write("void compute_nt_scaling(Workspace* work);\n")
+    f.write("void compute_lambda(Workspace* work);\n")
     f.write("void compute_WtW(Workspace* work);\n")
     f.write("#endif")
     f.close()
@@ -269,7 +271,6 @@ def generate_cone(solver_dir, m, Wnnz, Wsparse2dense):
         f.write("   work->Winv[%i] = 0.0;\n" % i)
     f.write("   int idx;\n")
     f.write("   for (idx = 0; idx < work->l; ++idx){\n")
-    # f.write("       work->WtW[idx] = safe_div(work->s[idx], work->z[idx]);\n")
     f.write("       work->W[idx] = qcos_sqrt(safe_div(work->s[idx], work->z[idx]));\n")
     f.write("       work->Winv[idx] = safe_div(1.0, work->W[idx]);\n")
     f.write("   }\n\n")
@@ -348,7 +349,20 @@ def generate_cone(solver_dir, m, Wnnz, Wsparse2dense):
                     if (Wsparse2dense[col1 * m + row1] != -1 and Wsparse2dense[col2 * m + row2] != -1):
                         f.write(" + work->W[%i] * work->W[%i]" % (Wsparse2dense[col1 * m + row1], Wsparse2dense[col2 * m + row2]))
                 f.write(";\n")
-    f.write("}\n")
+    f.write("}\n\n")
+
+    f.write("void compute_lambda(Workspace* work) {\n")
+    for i in range(m):
+        f.write("   work->lambda[%i] = " % i)
+        for j in range(m):
+            row = i
+            col = j
+            if (col < row):
+                row, col = col, row
+            if (Wsparse2dense[col * m + row] != -1):
+                f.write(" + work->W[%i] * work->z[%i]" % (Wsparse2dense[col * m + row], j))
+        f.write(";\n")
+    f.write("}\n\n")
     f.close()
 
 def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
@@ -555,6 +569,7 @@ def generate_solver(solver_dir, m, Wsparse2dense):
     f.write("         return;\n")
     f.write("      }\n")
     f.write("      compute_nt_scaling(work);\n")
+    f.write("      compute_lambda(work);\n")
     f.write("      compute_WtW(work);\n")
     f.write("   }\n")
     f.write("}\n\n")
@@ -614,6 +629,11 @@ def generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q):
     f.write("   printf(\"\\nWtW: {\");")
     f.write("   for(int i = 0; i < 9; ++i){\n")
     f.write("   printf(\"%f, \", work.WtW[i]);\n")
+    f.write("   }\n")
+
+    f.write("   printf(\"\\nlambda: {\");")
+    f.write("   for(int i = 0; i < work.m; ++i){\n")
+    f.write("   printf(\"%f, \", work.lambda[i]);\n")
     f.write("   }\n")
 
     f.write("}")
