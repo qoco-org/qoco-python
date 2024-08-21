@@ -123,6 +123,7 @@ def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz, Wnnz):
     f.write("   double D[%i];\n" % (n + m + p))
     f.write("   double W[%i];\n" % Wnnz)
     f.write("   double lambda[%i];\n" % m)
+    f.write("   double xbuff[%i];\n" % n)
     f.write("   double ubuff1[%i];\n" % m)
     f.write("   double ubuff2[%i];\n" % m)
     f.write("   double ubuff3[%i];\n" % m)
@@ -621,6 +622,7 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("void copy_arrayf(double* x, double* y, int n);\n")
     f.write("void copy_and_negate_arrayf(double* x, double* y, int n);\n")
     f.write("double dot(double* x, double* y, int n);\n")
+    f.write("void Px(double* x, double* y, Workspace* work);\n")
     f.write("void scale_arrayf(double* x, double* y, double s, int n);\n")
     f.write("void axpy(double* x, double* y, double* z, double a, int n);\n")
     f.write("unsigned char check_stopping(Workspace* work);\n")
@@ -713,6 +715,17 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("   return ans;\n")
     f.write("}\n\n")
 
+    f.write("void Px(double* x, double* y, Workspace* work){\n")
+    N = n + m + p
+    for i in range(n):
+        f.write("   y[%i] = " % i)
+        for j in range(n):
+            if (write_Kelem(f, i, j, n, m, p, P, A, G, np.linspace(0, N-1, N, dtype=np.int32), Wsparse2dense, False)):
+                f.write(" * x[%i]" % j)
+                f.write(" + ")
+        f.write("0;\n")
+    f.write("}\n\n")
+
     f.write("void scale_arrayf(double* x, double* y, double s, int n){\n")
     f.write("      for (int i = 0; i < n; ++i){\n")
     f.write("         y[i] = s * x[i];\n")
@@ -726,6 +739,10 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("}\n\n")
 
     f.write("unsigned char check_stopping(Workspace* work){\n")
+    f.write("   double obj = dot(work->c, work->x, work->n);\n")
+    f.write("   Px(work->x, work->xbuff, work);\n")
+    f.write("   obj += 0.5 * dot(work->x, work->xbuff, work->n);\n")
+    f.write("   work->sol.obj = obj;\n")
     f.write("   double pres = -1.0;\n")
     f.write("   double dres = -1.0;\n")
     f.write("   for (int i = 0; i < work->n; ++i){\n")
@@ -774,9 +791,11 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("       printf(\"\\nsolved: %d \", work->sol.solved);\n")
     f.write("       printf(\"\\nnumber of iterations: %d \", work->sol.iters);\n")
     f.write("       printf(\"\\nobjective: %f \", work->sol.obj);\n")
-    f.write("       printf(\"\\npres: %+.3e \", work->sol.pres);\n")
-    f.write("       printf(\"\\ndres: %+.3e \", work->sol.dres);\n")
-    f.write("       printf(\"\\ngap: %+.3e \", work->sol.gap);\n")
+    f.write("}\n\n")
+
+    f.write("void log_iter(Workspace* work) {\n")
+    f.write("printf(\"|   %2d   | %+.2e | %+.3e | %+.3e | %+.3e | %+.2e |   %.3f   |\\n\",work->sol.iters, work->sol.obj, work->sol.pres, work->sol.dres, work->sol.gap, work->mu, work->a);")
+    f.write("printf(\"+--------+-----------+------------+------------+------------+-----------+-----------+\\n\");")
     f.write("}\n")
     f.write("#endif\n")
     f.close()
@@ -846,7 +865,12 @@ def generate_solver(solver_dir, m, Wsparse2dense):
     f.write("      compute_lambda(work);\n")
     f.write("      compute_WtW(work);\n")
     f.write("      predictor_corrector(work);\n")
-    f.write("         work->sol.iters = i;\n")
+    f.write("      work->sol.iters = i;\n")
+    f.write("   #ifdef ENABLE_PRINTING\n")
+    f.write("       if (work->settings.verbose) {\n")
+    f.write("           log_iter(work);\n")
+    f.write("       }\n")
+    f.write("   #endif\n")
     f.write("   }\n")
     f.write("#ifdef ENABLE_PRINTING\n")
     f.write("   if (work->settings.verbose) {\n")
