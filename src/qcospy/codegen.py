@@ -40,7 +40,7 @@ def _generate_solver(n, m, p, P, c, A, b, G, h, l, nsoc, q, output_dir, name="qc
 
     # Get sparsity pattern of the regularized KKT matrix.
     reg = 1
-    K = sparse.bmat([[P + reg * sparse.identity(n), A.T, G.T],[A, -reg * sparse.identity(p), None], [G, None, -W]])
+    K = sparse.bmat([[P + reg * sparse.identity(n), A.T, G.T],[A, -reg * sparse.identity(p), None], [G, None, -W - 1e3 * sparse.identity(m)]])
     solver = qdldl.Solver(K)
     L, D, perm = solver.factors()
 
@@ -899,12 +899,19 @@ def generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q):
     f = open(solver_dir + "/runtest.c", "a")
     write_license(f)
     f.write("#include <stdio.h>\n")
+    f.write("#include <time.h>\n")
     f.write("#include \"qcos_custom.h\"\n\n")
     f.write("int main(){\n")
+    f.write("   struct timespec start, end;\n")
     f.write("   Workspace work;\n")
     f.write("   load_data(&work);\n")
     f.write("   set_default_settings(&work);\n")
+    f.write("   clock_gettime(CLOCK_MONOTONIC, &start);\n")
     f.write("   qcos_custom_solve(&work);\n")
+    f.write("   clock_gettime(CLOCK_MONOTONIC, &end);\n")
+    f.write("   double elapsed_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e6;\n")
+    f.write("   printf(\"\\nElapsed time: %.9f ms\", elapsed_time);")
+    
     # f.write("   printf(\"xyz: {\");")
     # f.write("   for(int i = 0; i < work.n + work.m + work.p; ++i){\n")
     # f.write("   printf(\"%f, \", work.xyz[i]);\n")
