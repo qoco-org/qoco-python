@@ -1,3 +1,6 @@
+# Copyright (c) 2024, Govind M. Chari <govindchari1@gmail.com>
+# This source code is licensed under the BSD 2-Clause License
+
 import importlib
 import numpy as np
 from scipy import sparse

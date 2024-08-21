@@ -1,3 +1,6 @@
+# Copyright (c) 2024, Govind M. Chari <govindchari1@gmail.com>
+# This source code is licensed under the BSD 2-Clause License
+
 import os
 import shutil
 import qdldl
@@ -59,6 +62,7 @@ def _generate_solver(n, m, p, P, c, A, b, G, h, l, nsoc, q, output_dir, name="qc
 
 def generate_cmakelists(solver_dir):
     f = open(solver_dir + "/CMakeLists.txt", "a")
+    # write_license(f)
     f.write("cmake_minimum_required(VERSION 3.18)\n")
     f.write("set(CMAKE_C_FLAGS \"-O3 -march=native -Wall -Wextra\")\n")
     f.write("project(qcos_custom)\n\n")
@@ -76,6 +80,7 @@ def generate_cmakelists(solver_dir):
 
 def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz, Wnnz):
     f = open(solver_dir + "/workspace.h", "a")
+    write_license(f)
     f.write("#ifndef WORKSPACE_H\n")
     f.write("#define WORKSPACE_H\n\n")
 
@@ -148,6 +153,7 @@ def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz, Wnnz):
 
 def generate_ldl(solver_dir, n, m, p, P, A, G, perm, Lidx, Wsparse2dense):
     f = open(solver_dir + "/ldl.h", "a")
+    write_license(f)
     f.write("#ifndef LDL_H\n")
     f.write("#define LDL_H\n\n")
     f.write("#include \"workspace.h\"\n\n")
@@ -158,6 +164,7 @@ def generate_ldl(solver_dir, n, m, p, P, A, G, perm, Lidx, Wsparse2dense):
     f.close()
 
     f = open(solver_dir + "/ldl.c", "a")
+    write_license(f)
     f.write("#include \"workspace.h\"\n\n")
     f.write("void ldl(Workspace* work){\n")
     N = n + m + p
@@ -218,6 +225,7 @@ def generate_ldl(solver_dir, n, m, p, P, A, G, perm, Lidx, Wsparse2dense):
 def generate_cone(solver_dir, m, Wnnz, Wsparse2dense):
     # Write header.
     f = open(solver_dir + "/cone.h", "a")
+    write_license(f)
     f.write("#ifndef CONE_H\n")
     f.write("#define CONE_H\n\n")
     f.write("#include \"utils.h\"\n\n")
@@ -243,6 +251,7 @@ def generate_cone(solver_dir, m, Wnnz, Wsparse2dense):
 
     # Write source.
     f = open(solver_dir + "/cone.c", "a")
+    write_license(f)
     f.write("#include \"cone.h\"\n\n")
 
     f.write("void soc_product(double* u, double* v, double* p, int n){\n")
@@ -482,6 +491,7 @@ def generate_cone(solver_dir, m, Wnnz, Wsparse2dense):
 def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
     # Write header.
     f = open(solver_dir + "/kkt.h", "a")
+    write_license(f)
     f.write("#ifndef KKT_H\n")
     f.write("#define KKT_H\n\n")
     f.write("#include \"cone.h\"\n")
@@ -497,6 +507,7 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
     # Write source.
     N = n + m + p
     f = open(solver_dir + "/kkt.c", "a")
+    write_license(f)
     f.write("#include \"kkt.h\"\n\n")
     f.write("void compute_kkt_residual(Workspace* work){\n")
 
@@ -608,6 +619,7 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
 def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2dense):
     # Write header.
     f = open(solver_dir + "/utils.h", "a")
+    write_license(f)
     f.write("#ifndef UTILS_H\n")
     f.write("#define UTILS_H\n\n")
     f.write("#include \"workspace.h\"\n\n")
@@ -637,6 +649,7 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
 
     # Write source.
     f = open(solver_dir + "/utils.c", "a")
+    write_license(f)
     f.write("#include \"utils.h\"\n\n")
 
     f.write("void load_data(Workspace* work){\n")
@@ -802,6 +815,7 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
 
 def generate_solver(solver_dir, m, Wsparse2dense):
     f = open(solver_dir + "/qcos_custom.h", "a")
+    write_license(f)
     f.write("#ifndef QCOS_CUSTOM_H\n")
     f.write("#define QCOS_CUSTOM_H\n\n")
     f.write("#include \"cone.h\"\n")
@@ -814,6 +828,7 @@ def generate_solver(solver_dir, m, Wsparse2dense):
     f.close()
 
     f = open(solver_dir + "/qcos_custom.c", "a")
+    write_license(f)
     f.write("#include \"qcos_custom.h\"\n\n")
     f.write("void initialize_ipm(Workspace* work){\n")
     f.write("   // Set NT block to I.\n")
@@ -882,6 +897,7 @@ def generate_solver(solver_dir, m, Wsparse2dense):
 
 def generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q):
     f = open(solver_dir + "/runtest.c", "a")
+    write_license(f)
     f.write("#include <stdio.h>\n")
     f.write("#include \"qcos_custom.h\"\n\n")
     f.write("int main(){\n")
