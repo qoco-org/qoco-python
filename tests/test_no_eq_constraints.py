@@ -1,7 +1,7 @@
 import qcospy as qcos
 import numpy as np
 from scipy import sparse
-from tests.utils.run_generated_solver import *
+from utils.run_generated_solver import *
 
 def test_linear_objective():
 

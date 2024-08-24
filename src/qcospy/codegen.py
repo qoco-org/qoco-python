@@ -38,7 +38,7 @@ def _generate_solver(n, m, p, P, c, A, b, G, h, l, nsoc, q, output_dir, name):
                 Wnnz_cnt+=1
 
     # Get sparsity pattern of the regularized KKT matrix.
-    Preg = P + sparse.identity(n) if P is not None else None
+    Preg = P + sparse.identity(n) if P is not None else sparse.identity(n)
     A = A if A is not None else None
     G = G if G is not None else None
     At = A.T if A is not None else None
@@ -66,7 +66,6 @@ def _generate_solver(n, m, p, P, c, A, b, G, h, l, nsoc, q, output_dir, name):
 
 def generate_cmakelists(solver_dir):
     f = open(solver_dir + "/CMakeLists.txt", "a")
-    # write_license(f)
     f.write("cmake_minimum_required(VERSION 3.18)\n")
     f.write("project(qcos_custom)\n\n")
     f.write("if(ENABLE_PRINTING)\n")

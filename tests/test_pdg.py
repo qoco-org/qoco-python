@@ -1,7 +1,7 @@
 import qcospy as qcos
 import numpy as np
 from scipy import sparse
-from tests.utils.run_generated_solver import *
+from utils.run_generated_solver import *
 
 def test_pdg():
     N = 30  # Number of timesteps.
@@ -31,7 +31,7 @@ def test_pdg():
     nsoc = 2 * N - 2
 
     # Dimension of each second order cone.
-    q = np.hstack((4 * np.ones(N - 1), 3 * np.ones(N - 1)))
+    q = np.hstack((4 * np.ones(N - 1, dtype=np.int32), 3 * np.ones(N - 1, dtype=np.int32)))
 
     # Parse cost function.
     Qfull = sparse.kron(sparse.eye(N), Q)
