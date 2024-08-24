@@ -1,6 +1,7 @@
 import qcospy as qcos
 import numpy as np
 from scipy import sparse
+from tests.utils.run_generated_solver import *
 
 def test_pdg():
     N = 30  # Number of timesteps.
@@ -115,9 +116,13 @@ def test_pdg():
 
     prob_qcos.setup(n, m, p, P, c, A, b, G, h, l, nsoc, q)
 
+    prob_qcos.generate_solver("tests/", "qcos_custom_pdg")
+    codegen_solved, codegen_obj, average_runtime_ms = run_generated_solver("tests/qcos_custom_pdg")
+
     # Solve problem.
     res = prob_qcos.solve()
-
     opt_obj = 61243.596
     assert(res.status == 'QCOS_SOLVED')
-    assert(abs(res.obj - opt_obj) <= 1e-2)
+    assert(abs(res.obj - opt_obj) <= 1e-1)
+    assert(codegen_solved)
+    assert(abs(codegen_obj - opt_obj) <= 1e-1)

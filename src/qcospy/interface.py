@@ -122,5 +122,5 @@ class QCOS:
         results = SimpleNamespace(x=self._solver.solution.x, s=self._solver.solution.s, y=self._solver.solution.y, z=self._solver.solution.z, iters=self._solver.solution.iters, solve_time_sec=self._solver.solution.solve_time_sec, obj=self._solver.solution.obj, pres=self._solver.solution.pres, dres=self._solver.solution.dres, gap=self._solver.solution.gap, status=self.solvecodes[self._solver.solution.status])
         return results
     
-    def generate_solver(self, output_dir='.'):
-        _generate_solver(self.n, self.m, self.p, self.Psp, self.c, self.Asp, self.b, self.Gsp, self.h, self.l, self.nsoc, self.q, output_dir)
+    def generate_solver(self, output_dir='.', name="qcos_custom"):
+        _generate_solver(self.n, self.m, self.p, self.Psp, self.c, self.Asp, self.b, self.Gsp, self.h, self.l, self.nsoc, self.q, output_dir, name)

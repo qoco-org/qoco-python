@@ -19,16 +19,21 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, perm, Wsparse2dense, reg):
     # P block
     if (i < n and j < n):
         # Check if element is nonzero. TODO: There should be a better way to check if an element is nonzero.
-        if P[i,j] == 0.0:
-            # f.write("0")
-            return False
+        if P is not None:
+            if P[i,j] == 0.0:
+                # f.write("0")
+                return False
+            else:
+                # need to get index of P[i,j] in the data array for P.
+                dataidx = get_data_idx(P, i, j)
+                f.write("work->P[%d]" % dataidx)
+            if (i == j and reg):
+                f.write(" + work->settings.kkt_reg")
+        elif P is None and i == j and reg:
+            f.write("work->settings.kkt_reg")
         else:
-            # need to get index of P[i,j] in the data array for P.
-            dataidx = get_data_idx(P, i, j)
-            f.write("work->P[%d]" % dataidx)
-        if (i == j and reg):
-            f.write(" + work->settings.kkt_reg")
-    
+            return False
+
     # A' block    
     elif (i < n and j >= n and j < n + p):
         # Row and column of A

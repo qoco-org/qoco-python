@@ -6,10 +6,9 @@ import shutil
 import qdldl
 import numpy as np
 from scipy import sparse
-from matplotlib import pyplot as plt
 from qcospy.codegen_utils import *
 
-def _generate_solver(n, m, p, P, c, A, b, G, h, l, nsoc, q, output_dir, name="qcos_custom"):
+def _generate_solver(n, m, p, P, c, A, b, G, h, l, nsoc, q, output_dir, name):
     solver_dir = output_dir + "/" + name
 
     print("\n")
@@ -39,8 +38,13 @@ def _generate_solver(n, m, p, P, c, A, b, G, h, l, nsoc, q, output_dir, name="qc
                 Wnnz_cnt+=1
 
     # Get sparsity pattern of the regularized KKT matrix.
-    reg = 1
-    K = sparse.bmat([[P + reg * sparse.identity(n), A.T, G.T],[A, -reg * sparse.identity(p), None], [G, None, -W - 1e3 * sparse.identity(m)]])
+    Preg = P + sparse.identity(n) if P is not None else None
+    A = A if A is not None else None
+    G = G if G is not None else None
+    At = A.T if A is not None else None
+    Gt = G.T if G is not None else None
+
+    K = sparse.bmat([[Preg, At, Gt],[A, -sparse.identity(p), None], [G, None, -W - 1e3 * sparse.identity(m)]])
     solver = qdldl.Solver(K)
     L, D, perm = solver.factors()
 
@@ -117,15 +121,20 @@ def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz, Wnnz):
     f.write("   unsigned char solved;\n")
     f.write("} Solution;\n\n")
 
+    Pnnz = len(P.data) if P is not None else 0
+    Annz = len(A.data) if A is not None else 0
+    Gnnz = len(G.data) if G is not None else 0
+    qmax = max(q) if len(q) > 0 else 0
+
     f.write("typedef struct {\n")
     f.write("   int n;\n")
     f.write("   int m;\n")
     f.write("   int p;\n")
-    f.write("   double P[%i];\n" % (len(P.data)))
+    f.write("   double P[%i];\n" % (Pnnz))
     f.write("   double c[%i];\n" % (n))
-    f.write("   double A[%i];\n" % (len(A.data)))
+    f.write("   double A[%i];\n" % (Annz))
     f.write("   double b[%i];\n" % (p))
-    f.write("   double G[%i];\n" % (len(G.data)))
+    f.write("   double G[%i];\n" % (Gnnz))
     f.write("   double h[%i];\n" % (m))
     f.write("   int l;\n")
     f.write("   int nsoc;\n")
@@ -149,8 +158,8 @@ def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz, Wnnz):
     f.write("   double kkt_res[%i];\n" % (n + m + p))
     f.write("   double xyz[%i];\n" % (n + m + p))
     f.write("   double xyzbuff[%i];\n" % (n + m + p))
-    f.write("   double sbar[%i];\n" % max(q))
-    f.write("   double zbar[%i];\n" % max(q))
+    f.write("   double sbar[%i];\n" % qmax)
+    f.write("   double zbar[%i];\n" % qmax)
     f.write("   double mu;\n")
     f.write("   double sigma;\n")
     f.write("   double a;\n\n")
@@ -667,7 +676,11 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("   work->m = %d;\n" % m)
     f.write("   work->p = %d;\n" % p)
 
-    for i in range(len(P.data)):
+    Pnnz = len(P.data) if P is not None else 0
+    Annz = len(A.data) if A is not None else 0
+    Gnnz = len(G.data) if G is not None else 0
+
+    for i in range(Pnnz):
         f.write("   work->P[%i] = %.17g;\n" % (i, P.data[i]))
     f.write("\n")
 
@@ -675,7 +688,7 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
         f.write("   work->c[%i] = %.17g;\n" % (i, c[i]))
     f.write("\n")
 
-    for i in range(len(A.data)):
+    for i in range(Annz):
         f.write("   work->A[%i] = %.17g;\n" % (i, A.data[i]))
     f.write("\n")
 
@@ -683,7 +696,7 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
         f.write("   work->b[%i] = %.17g;\n" % (i, b[i]))
     f.write("\n")
 
-    for i in range(len(G.data)):
+    for i in range(Gnnz):
         f.write("   work->G[%i] = %.17g;\n" % (i, G.data[i]))
     f.write("\n")
 
@@ -783,6 +796,10 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("   return 0;\n")
     f.write("}\n\n")
 
+    Pnnz = len(P.data) if P is not None else 0
+    Annz = len(A.data) if A is not None else 0
+    Gnnz = len(G.data) if G is not None else 0
+
     f.write("#ifdef ENABLE_PRINTING\n")
     f.write("void print_header(Workspace* work) {\n")
     f.write("   printf(\"\\n\");\n")
@@ -797,9 +814,9 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("   printf(\"|     eq constraints:   %-9d                       |\\n\");\n" % p)
     f.write("   printf(\"|     ineq constraints: %-9d                       |\\n\");\n" % l)
     f.write("   printf(\"|     soc constraints:  %-9d                       |\\n\");\n" % nsoc)
-    f.write("   printf(\"|     nnz(P):           %-9d                       |\\n\");\n" % P.nnz)
-    f.write("   printf(\"|     nnz(A):           %-9d                       |\\n\");\n" % A.nnz)
-    f.write("   printf(\"|     nnz(G):           %-9d                       |\\n\");\n" % G.nnz)
+    f.write("   printf(\"|     nnz(P):           %-9d                       |\\n\");\n" % Pnnz)
+    f.write("   printf(\"|     nnz(A):           %-9d                       |\\n\");\n" % Annz)
+    f.write("   printf(\"|     nnz(G):           %-9d                       |\\n\");\n" % Gnnz)
     f.write("   printf(\"| Solver Settings:                                      |\\n\");\n")
     f.write("   printf(\"|     max_iter: %-3d efeas: %3.2e egap: %3.2e      |\\n\", work->settings.max_iters, work->settings.eps_feas, work->settings.eps_gap);\n")
     f.write("   printf(\"|     bisection_iters: %-2d static_regularization: %3.2e     |\\n\", work->settings.bisection_iters, work->settings.kkt_reg);\n")
@@ -926,8 +943,14 @@ def generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q):
     f.write("       double elapsed_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;\n")
     f.write("       total_time += elapsed_time;\n")
     f.write("   }\n")
+    f.write("   double average_solvetime_ms = 1e3 * total_time / N;\n")
     f.write("   printf(\"\\nTotal Time: %.9f ms\", 1e3 * total_time);\n")
     f.write("   printf(\"\\nAverage Solvetime: %.9f ms\", 1e3 * total_time / N);\n")
+    f.write("   FILE *file = fopen(\"result.bin\", \"wb\");\n")
+    f.write("   fwrite(&work.sol.solved, sizeof(unsigned char), 1, file);\n")
+    f.write("   fwrite(&work.sol.obj, sizeof(double), 1, file);\n")
+    f.write("   fwrite(&average_solvetime_ms, sizeof(double), 1, file);\n")
+    f.write("   fclose(file);\n")
     
     # f.write("   printf(\"xyz: {\");")
     # f.write("   for(int i = 0; i < work.n + work.m + work.p; ++i){\n")
@@ -939,7 +962,7 @@ def generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q):
     # f.write("   printf(\"%f, \", work.kkt_res[i]);\n")
     # f.write("   }\n")
 
-    # f.write("   printf(\"mu: %f\", work.mu);\n")
+    f.write("   printf(\"\\nobj: %f\", work.sol.obj);\n")
 
     f.write("   printf(\"\\n\\nx: {\");")
     f.write("   for(int i = 0; i < work.n; ++i){\n")

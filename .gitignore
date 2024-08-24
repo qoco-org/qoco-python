@@ -2,4 +2,4 @@
 build/
 .vscode/
 __pycache__/
-qcos_custom/
+qcos_custom*/

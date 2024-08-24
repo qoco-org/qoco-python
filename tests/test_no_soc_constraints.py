@@ -1,7 +1,7 @@
 import qcospy as qcos
-
 import numpy as np
 from scipy import sparse
+from tests.utils.run_generated_solver import *
 
 def test_linear_objective():
 
@@ -33,6 +33,11 @@ def test_linear_objective():
     # Solve problem.
     res = prob.solve()
 
+    prob.generate_solver("tests/", "qcos_custom_no_soc")
+    codegen_solved, codegen_obj, average_runtime_ms = run_generated_solver("tests/qcos_custom_no_soc")
+
     opt_obj = 4.800
     assert(res.status == 'QCOS_SOLVED')
     assert(abs(res.obj - opt_obj) <= 1e-4)
+    assert(codegen_solved)
+    assert(abs(codegen_obj - opt_obj) <= 1e-4)
