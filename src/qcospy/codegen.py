@@ -31,7 +31,7 @@ def _generate_solver(n, m, p, P, c, A, b, G, h, l, nsoc, q, output_dir, name="qc
     Wnnz_cnt = 0
 
     # Maps sparse 1D index (1,...,m^2) of W to its sparse index (1,...,Wnnz). Note that accessing an lower triangular element of W returns -1.
-    Wsparse2dense = -np.ones((m*m,1))
+    Wsparse2dense = -np.ones((m*m))
     for j in range(m):
         for i in range(m):
             if (W[i,j] != 0.0 and i <= j):

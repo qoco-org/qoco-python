@@ -85,7 +85,7 @@ def test_pdg():
     Gzthrust = np.zeros((4 * (N - 1), 6 * N))
     Guthrust = np.kron(np.eye(N - 1), np.block([[np.zeros((1, 3))], [-np.eye(3)]]))
     Gxithrust = np.kron(np.ones(N - 1), np.array([-1, 0, 0, 0]))
-    Gxithrust = np.asmatrix(Gxithrust).T
+    Gxithrust=Gxithrust[:,np.newaxis]
 
     # Parse pointing constraint.
     Gzpointing = np.zeros((3 * (N - 1), 6 * N))
