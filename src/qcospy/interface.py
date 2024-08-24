@@ -55,9 +55,9 @@ class QCOS:
         self.m = m
         self.n = n
         self.p = p
-        self.Psp = P.astype(np.float64)
-        self.Asp = A.astype(np.float64)
-        self.Gsp = G.astype(np.float64)
+        self.Psp = P.astype(np.float64) if P is not None else None
+        self.Asp = A.astype(np.float64) if A is not None else None
+        self.Gsp = G.astype(np.float64) if G is not None else None
 
         if P is not None:
             self.P = self.ext.CSC(sparse.triu(P, format="csc").astype(np.float64))
