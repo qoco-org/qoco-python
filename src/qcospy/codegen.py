@@ -116,8 +116,8 @@ def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz, Wnnz):
     f.write("   int max_iters;\n")
     f.write("   int bisection_iters;\n")
     f.write("   double kkt_reg;\n")
-    f.write("   double eps_gap;\n")
-    f.write("   double eps_feas;\n")
+    f.write("   double eabs;\n")
+    f.write("   double erel;\n")
     f.write("   unsigned char solved;\n")
     f.write("   unsigned char verbose;\n")
     f.write("} Settings;\n\n")
@@ -746,7 +746,12 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("void copy_arrayf(double* x, double* y, int n);\n")
     f.write("void copy_and_negate_arrayf(double* x, double* y, int n);\n")
     f.write("double dot(double* x, double* y, int n);\n")
+    f.write("double inf_norm(double*x, int n);\n")
     f.write("void Px(double* x, double* y, Workspace* work);\n")
+    f.write("void Ax(double* x, double* y, Workspace* work);\n")
+    f.write("void Gx(double* x, double* y, Workspace* work);\n")
+    f.write("void Atx(double* x, double* y, Workspace* work);\n")
+    f.write("void Gtx(double* x, double* y, Workspace* work);\n")
     f.write("void scale_arrayf(double* x, double* y, double s, int n);\n")
     f.write("void axpy(double* x, double* y, double* z, double a, int n);\n")
     f.write("unsigned char check_stopping(Workspace* work);\n")
@@ -818,8 +823,8 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("   work->settings.max_iters = 50;\n")
     f.write("   work->settings.bisection_iters = 5;\n")
     f.write("   work->settings.kkt_reg = 1e-7;\n")
-    f.write("   work->settings.eps_gap = 1e-7;\n")
-    f.write("   work->settings.eps_feas = 1e-7;\n")
+    f.write("   work->settings.eabs = 1e-7;\n")
+    f.write("   work->settings.erel = 1e-7;\n")
     f.write("   work->settings.solved = 0;\n")
     f.write("   work->settings.verbose = 1;\n")
     f.write("}\n\n")
@@ -844,6 +849,16 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("   return ans;\n")
     f.write("}\n\n")
 
+    f.write("double inf_norm(double* x, int n) {\n")
+    f.write("   double norm = 0.0;\n")
+    f.write("   double xi;\n")
+    f.write("   for (int i = 0; i < n; ++i) {\n")
+    f.write("       xi = qcos_abs(x[i]);\n")
+    f.write("       norm = qcos_max(norm , xi);\n")
+    f.write("   }\n")
+    f.write("   return norm;\n")
+    f.write("}\n")
+
     f.write("void Px(double* x, double* y, Workspace* work){\n")
     N = n + m + p
     for i in range(n):
@@ -853,6 +868,102 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
                 f,
                 i,
                 j,
+                n,
+                m,
+                p,
+                P,
+                A,
+                G,
+                np.linspace(0, N - 1, N, dtype=np.int32),
+                Wsparse2dense,
+                False,
+            ):
+                f.write(" * x[%i]" % j)
+                f.write(" + ")
+        f.write("0;\n")
+    f.write("}\n\n")
+
+    f.write("void Ax(double* x, double* y, Workspace* work){\n")
+    N = n + m + p
+    for i in range(p):
+        f.write("   y[%i] = " % i)
+        for j in range(n):
+            if write_Kelem(
+                f,
+                i + n,
+                j,
+                n,
+                m,
+                p,
+                P,
+                A,
+                G,
+                np.linspace(0, N - 1, N, dtype=np.int32),
+                Wsparse2dense,
+                False,
+            ):
+                f.write(" * x[%i]" % j)
+                f.write(" + ")
+        f.write("0;\n")
+    f.write("}\n\n")
+
+    f.write("void Gx(double* x, double* y, Workspace* work){\n")
+    N = n + m + p
+    for i in range(m):
+        f.write("   y[%i] = " % i)
+        for j in range(n):
+            if write_Kelem(
+                f,
+                i + n + p,
+                j,
+                n,
+                m,
+                p,
+                P,
+                A,
+                G,
+                np.linspace(0, N - 1, N, dtype=np.int32),
+                Wsparse2dense,
+                False,
+            ):
+                f.write(" * x[%i]" % j)
+                f.write(" + ")
+        f.write("0;\n")
+    f.write("}\n\n")
+
+    f.write("void Atx(double* x, double* y, Workspace* work){\n")
+    N = n + m + p
+    for i in range(n):
+        f.write("   y[%i] = " % i)
+        for j in range(p):
+            if write_Kelem(
+                f,
+                i,
+                j + n,
+                n,
+                m,
+                p,
+                P,
+                A,
+                G,
+                np.linspace(0, N - 1, N, dtype=np.int32),
+                Wsparse2dense,
+                False,
+            ):
+                f.write(" * x[%i]" % j)
+                f.write(" + ")
+        f.write("0;\n")
+    f.write("}\n\n")
+
+    f.write("void Gtx(double* x, double* y, Workspace* work){\n")
+    N = n + m + p
+    for i in range(n):
+        f.write("   y[%i] = " % i)
+        for j in range(m):
+            if write_Kelem(
+                f,
+                i,
+                j + n + p,
                 n,
                 m,
                 p,
@@ -881,23 +992,49 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("}\n\n")
 
     f.write("unsigned char check_stopping(Workspace* work){\n")
+    f.write("   // Compute objective.\n")
     f.write("   double obj = dot(work->c, work->x, work->n);\n")
     f.write("   Px(work->x, work->xbuff, work);\n")
+    f.write("   double Pxinf = inf_norm(work->xbuff, work->n);\n")
     f.write("   obj += 0.5 * dot(work->x, work->xbuff, work->n);\n")
-    f.write("   work->sol.obj = obj;\n")
-    f.write("   double pres = -1.0;\n")
-    f.write("   double dres = -1.0;\n")
-    f.write("   for (int i = 0; i < work->n; ++i){\n")
-    f.write("      dres = qcos_max(dres, qcos_abs(work->kkt_res[i]));\n")
-    f.write("   }\n")
-    f.write("   for (int i = 0; i < work->m + work->p; ++i){\n")
-    f.write("      pres = qcos_max(pres, qcos_abs(work->kkt_res[work->n + i]));\n")
-    f.write("   }\n")
+    f.write("   work->sol.obj = obj;\n\n")
+    f.write("   // Compute primal residual, dual residual, and duality gap.\n")
+    f.write("   double pres = inf_norm(&work->kkt_res[work->n], work->p + work->m);\n")
+    f.write("   double dres = inf_norm(work->kkt_res, work->n);\n")
     f.write("   work->sol.pres = pres;\n")
     f.write("   work->sol.dres = dres;\n")
-    f.write("   work->sol.gap = work->mu * work->m;\n")
+    f.write("   work->sol.gap = work->mu * work->m;\n\n")
+
+    f.write("   double binf = work->p > 0 ? inf_norm(work->b, work->p) : 0;\n")
+    f.write("   double sinf = work->m > 0 ? inf_norm(work->s, work->m) : 0;\n")
+    f.write("   double zinf = work->p > 0 ? inf_norm(work->z, work->m) : 0;\n")
+    f.write("   double cinf = work->n > 0 ? inf_norm(work->c, work->n) : 0;\n")
+    f.write("   double hinf = work->m > 0 ? inf_norm(work->h, work->m) : 0;\n")
+    f.write("   Gtx(work->z, work->xbuff, work);\n")
+    f.write("   double Gtzinf = inf_norm(work->xbuff, work->n);\n")
+    f.write("   Atx(work->y, work->xbuff, work);\n")
+    f.write("   double Atyinf = inf_norm(work->xbuff, work->n);\n")
+    f.write("   Gx(work->x, work->ubuff1, work);\n")
+    f.write("   double Gxinf = inf_norm(work->ubuff1, work->m);\n")
+    # Using xbuff instead of adding a ybuff, since n >= p
+    f.write("   Ax(work->x, work->xbuff, work);\n")
+    f.write("   double Axinf = inf_norm(work->xbuff, work->p);\n\n")
+
+    f.write("   // Compute max{Axinf, binf, Gxinf, hinf, sinf}.\n")
+    f.write("   double pres_rel = qcos_max(Axinf, binf);\n")
+    f.write("   pres_rel = qcos_max(pres_rel, Gxinf);\n")
+    f.write("   pres_rel = qcos_max(pres_rel, hinf);\n")
+    f.write("   pres_rel = qcos_max(pres_rel, sinf);\n\n")
+    f.write("   // Compute max{Pxinf, Atyinf, Gtzinf, cinf}.\n")
+    f.write("   double dres_rel = qcos_max(Pxinf, Atyinf);\n")
+    f.write("   dres_rel = qcos_max(dres_rel, Gtzinf);\n")
+    f.write("   dres_rel = qcos_max(dres_rel, cinf);\n\n")
+
+    f.write("   // Compute max{sinf, zinf}.\n")
+    f.write("   double gap_rel = qcos_max(sinf, zinf);\n\n")
+
     f.write(
-        "   if (qcos_max(pres, dres) < work->settings.eps_feas && work->sol.gap < work->settings.eps_gap) {\n"
+        "   if (pres < work->settings.eabs + work->settings.erel * pres_rel && dres < work->settings.eabs + work->settings.erel * dres_rel && work->sol.gap < work->settings.eabs + work->settings.erel * gap_rel) {\n"
     )
     f.write("      return 1;\n")
     f.write("   }\n")
@@ -958,7 +1095,7 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
         '   printf("| Solver Settings:                                      |\\n");\n'
     )
     f.write(
-        '   printf("|     max_iter: %-3d efeas: %3.2e egap: %3.2e      |\\n", work->settings.max_iters, work->settings.eps_feas, work->settings.eps_gap);\n'
+        '   printf("|     max_iter: %-3d eabs: %3.2e erel: %3.2e      |\\n", work->settings.max_iters, work->settings.eabs, work->settings.erel);\n'
     )
     f.write(
         '   printf("|     bisection_iters: %-2d static_regularization: %3.2e     |\\n", work->settings.bisection_iters, work->settings.kkt_reg);\n'

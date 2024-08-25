@@ -5,6 +5,7 @@ from scipy import sparse
 from tests.utils.run_generated_solver import *
 from tests.utils.cvxpy_to_qcos import convert
 
+
 def test_lcvx():
     tspan = 8
     dt = 1
@@ -92,13 +93,15 @@ def test_lcvx():
 
     prob_qcos.setup(n, m, p, P, c, A, b, G, h, l, nsoc, q)
 
-    # prob_qcos.generate_solver("tests/", "qcos_custom_lcvx")
-    # codegen_solved, codegen_obj, average_runtime_ms = run_generated_solver("tests/qcos_custom_lcvx")
+    prob_qcos.generate_solver("tests/", "qcos_custom_lcvx")
+    codegen_solved, codegen_obj, average_runtime_ms = run_generated_solver(
+        "tests/qcos_custom_lcvx"
+    )
 
     # Solve problem.
     res = prob_qcos.solve()
     opt_obj = probcp.value
-    assert(res.status == 'QCOS_SOLVED')
-    assert(abs(res.obj - opt_obj) <= 1e-4)
-    # assert(codegen_solved)
-    # assert(abs(codegen_obj - opt_obj) <= 1e-4)
+    assert res.status == "QCOS_SOLVED"
+    assert abs(res.obj - opt_obj) <= 1e-4
+    assert codegen_solved
+    assert abs(codegen_obj - opt_obj) <= 1e-4
