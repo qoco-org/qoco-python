@@ -3,16 +3,17 @@ import numpy as np
 from scipy import sparse
 from tests.utils.run_generated_solver import *
 
+
 def test_simple_socp():
     # Define problem data
-    P = sparse.diags([1,2,3,4,5,6], 0)
+    P = sparse.diags([1, 2, 3, 4, 5, 6], 0)
     P = P.tocsc()
 
-    c = np.array([1,2,3,4,5,6])
+    c = np.array([1, 2, 3, 4, 5, 6])
     G = -sparse.identity(6)
     G = G.tocsc()
     h = np.zeros(6)
-    A = sparse.csc_matrix([[1,1,0,0,0,0],[0,1,2,0,0,0]])
+    A = sparse.csc_matrix([[1, 1, 0, 0, 0, 0], [0, 1, 2, 0, 0, 0]])
     A = A.tocsc()
     b = np.array([1, 2])
 
@@ -31,12 +32,14 @@ def test_simple_socp():
 
     # Solve problem.
     res = prob.solve()
-    
+
     prob.generate_solver("tests/", "qcos_custom_simple_socp2")
-    codegen_solved, codegen_obj, average_runtime_ms = run_generated_solver("tests/qcos_custom_simple_socp2")
+    codegen_solved, codegen_obj, average_runtime_ms = run_generated_solver(
+        "tests/qcos_custom_simple_socp2"
+    )
 
     opt_obj = 5.242
-    assert(res.status == 'QCOS_SOLVED')
-    assert(abs(res.obj - opt_obj) <= 1e-4)
-    assert(codegen_solved)
-    assert(abs(codegen_obj - opt_obj) <= 1e-4)
+    assert res.status == "QCOS_SOLVED"
+    assert abs(res.obj - opt_obj) <= 1e-4
+    assert codegen_solved
+    assert abs(codegen_obj - opt_obj) <= 1e-4

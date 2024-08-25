@@ -6,6 +6,8 @@ import numpy as np
 from scipy import sparse
 from types import SimpleNamespace
 from qcospy.codegen import _generate_solver
+
+
 class QCOS:
     def __init__(self, *args, **kwargs):
         self.m = None
@@ -31,10 +33,14 @@ class QCOS:
         self.nsoc = None
         self.q = None
 
+        self.solvecodes = [
+            "QCOS_UNSOLVED",
+            "QCOS_SOLVED",
+            "QCOS_SOLVED_INACCURATE",
+            "QCOS_MAX_ITER",
+        ]
 
-        self.solvecodes = ["QCOS_UNSOLVED", "QCOS_SOLVED", "QCOS_SOLVED_INACCURATE", "QCOS_MAX_ITER"]
-
-        self.ext = importlib.import_module('qcos_ext')
+        self.ext = importlib.import_module("qcos_ext")
         self._solver = None
 
     def update_settings(self, **kwargs):
@@ -43,7 +49,7 @@ class QCOS:
         settings_changed = False
 
         for k in self.ext.QCOSSettings.__dict__:
-            if not k.startswith('__'):
+            if not k.startswith("__"):
                 if k in kwargs:
                     setattr(self.settings, k, kwargs[k])
                     settings_changed = True
@@ -63,12 +69,12 @@ class QCOS:
             self.P = self.ext.CSC(sparse.triu(P, format="csc").astype(np.float64))
         else:
             self.P = self.ext.CSC(None)
-        
+
         if c is not None:
             self.c = c.astype(np.float64)
         else:
             raise ValueError("c cannot be None")
-        
+
         if A is not None:
             self.A = self.ext.CSC(A.astype(np.float64))
         else:
@@ -92,7 +98,7 @@ class QCOS:
         self.l = l
         self.nsoc = nsoc
         if q is not None:
-            if not isinstance(q,np.ndarray):
+            if not isinstance(q, np.ndarray):
                 q = np.array(q)
             self.q = q.astype(np.int32)
         else:
@@ -113,14 +119,41 @@ class QCOS:
             self.l,
             self.nsoc,
             self.q,
-            self.settings
+            self.settings,
         )
 
     def solve(self):
         self._solver.solve()
 
-        results = SimpleNamespace(x=self._solver.solution.x, s=self._solver.solution.s, y=self._solver.solution.y, z=self._solver.solution.z, iters=self._solver.solution.iters, solve_time_sec=self._solver.solution.solve_time_sec, obj=self._solver.solution.obj, pres=self._solver.solution.pres, dres=self._solver.solution.dres, gap=self._solver.solution.gap, status=self.solvecodes[self._solver.solution.status])
+        results = SimpleNamespace(
+            x=self._solver.solution.x,
+            s=self._solver.solution.s,
+            y=self._solver.solution.y,
+            z=self._solver.solution.z,
+            iters=self._solver.solution.iters,
+            solve_time_sec=self._solver.solution.solve_time_sec,
+            obj=self._solver.solution.obj,
+            pres=self._solver.solution.pres,
+            dres=self._solver.solution.dres,
+            gap=self._solver.solution.gap,
+            status=self.solvecodes[self._solver.solution.status],
+        )
         return results
-    
-    def generate_solver(self, output_dir='.', name="qcos_custom"):
-        _generate_solver(self.n, self.m, self.p, self.Psp, self.c, self.Asp, self.b, self.Gsp, self.h, self.l, self.nsoc, self.q, output_dir, name)
+
+    def generate_solver(self, output_dir=".", name="qcos_custom"):
+        _generate_solver(
+            self.n,
+            self.m,
+            self.p,
+            self.Psp,
+            self.c,
+            self.Asp,
+            self.b,
+            self.Gsp,
+            self.h,
+            self.l,
+            self.nsoc,
+            self.q,
+            output_dir,
+            name,
+        )

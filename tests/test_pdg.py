@@ -3,6 +3,7 @@ import numpy as np
 from scipy import sparse
 from tests.utils.run_generated_solver import *
 
+
 def test_pdg():
     N = 30  # Number of timesteps.
     dt = 0.5  # Discretization interval.
@@ -31,7 +32,9 @@ def test_pdg():
     nsoc = 2 * N - 2
 
     # Dimension of each second order cone.
-    q = np.hstack((4 * np.ones(N - 1, dtype=np.int32), 3 * np.ones(N - 1, dtype=np.int32)))
+    q = np.hstack(
+        (4 * np.ones(N - 1, dtype=np.int32), 3 * np.ones(N - 1, dtype=np.int32))
+    )
 
     # Parse cost function.
     Qfull = sparse.kron(sparse.eye(N), Q)
@@ -86,7 +89,7 @@ def test_pdg():
     Gzthrust = np.zeros((4 * (N - 1), 6 * N))
     Guthrust = np.kron(np.eye(N - 1), np.block([[np.zeros((1, 3))], [-np.eye(3)]]))
     Gxithrust = np.kron(np.ones(N - 1), np.array([-1, 0, 0, 0]))
-    Gxithrust=Gxithrust[:,np.newaxis]
+    Gxithrust = Gxithrust[:, np.newaxis]
 
     # Parse pointing constraint.
     Gzpointing = np.zeros((3 * (N - 1), 6 * N))
@@ -117,12 +120,14 @@ def test_pdg():
     prob_qcos.setup(n, m, p, P, c, A, b, G, h, l, nsoc, q)
 
     prob_qcos.generate_solver("tests/", "qcos_custom_pdg")
-    codegen_solved, codegen_obj, average_runtime_ms = run_generated_solver("tests/qcos_custom_pdg")
+    codegen_solved, codegen_obj, average_runtime_ms = run_generated_solver(
+        "tests/qcos_custom_pdg"
+    )
 
     # Solve problem.
     res = prob_qcos.solve()
     opt_obj = 61243.596
-    assert(res.status == 'QCOS_SOLVED')
-    assert(abs(res.obj - opt_obj) <= 1e-1)
-    assert(codegen_solved)
-    assert(abs(codegen_obj - opt_obj) <= 1e-1)
+    assert res.status == "QCOS_SOLVED"
+    assert abs(res.obj - opt_obj) <= 1e-1
+    assert codegen_solved
+    assert abs(codegen_obj - opt_obj) <= 1e-1
