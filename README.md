@@ -24,4 +24,4 @@ $$\mathcal{Q}^{q_i}_i = \\{(t,x)  \in \mathbb{R} \times \mathbb{R}^{q_i - 1} \\;
 
 ## Bug reports
 
-File any issues or bug reports using the [issue tracker](https://github.com/govindchari/qcos/issues).
+File any issues or bug reports using the [issue tracker](https://github.com/govindchari/qcos-python/issues).
