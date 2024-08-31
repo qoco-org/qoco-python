@@ -89,7 +89,7 @@ def _generate_solver(n, m, p, P, c, A, b, G, h, l, nsoc, q, output_dir, name):
     generate_ldl(solver_dir, n, m, p, P, A, G, perm, Lidx, Wsparse2dense)
     generate_cone(solver_dir, m, Wnnz, Wsparse2dense)
     generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense)
-    generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2dense)
+    generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2dense, Wnnz)
     generate_solver(solver_dir, m, Wsparse2dense)
     generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q)
 
@@ -135,6 +135,7 @@ def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz, Wnnz):
     f.write("typedef struct {\n")
     f.write("   int max_iters;\n")
     f.write("   int bisect_iters;\n")
+    f.write("   int ruiz_iters;\n")
     f.write("   double kkt_reg;\n")
     f.write("   double abstol;\n")
     f.write("   double reltol;\n")
@@ -174,6 +175,8 @@ def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz, Wnnz):
     f.write("   int l;\n")
     f.write("   int nsoc;\n")
     f.write("   int q[%i];\n" % (len(q)))
+    f.write("   int Pnnz;\n")
+    f.write("   int Wnnz;\n")
     f.write("   double x[%i];\n" % (n))
     f.write("   double s[%i];\n" % (m))
     f.write("   double y[%i];\n" % (p))
@@ -192,7 +195,12 @@ def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz, Wnnz):
     f.write("   double kkt_rhs[%i];\n" % (n + m + p))
     f.write("   double kkt_res[%i];\n" % (n + m + p))
     f.write("   double xyz[%i];\n" % (n + m + p))
-    f.write("   double delta[%i];\n" % (n + m + p))
+    f.write("   double Druiz[%i];\n" % (n))
+    f.write("   double Eruiz[%i];\n" % (p))
+    f.write("   double Fruiz[%i];\n" % (m))
+    f.write("   double Dinvruiz[%i];\n" % (n))
+    f.write("   double Einvruiz[%i];\n" % (p))
+    f.write("   double Finvruiz[%i];\n" % (m))
     f.write("   double xyzbuff[%i];\n" % (n + m + p))
     f.write("   double sbar[%i];\n" % qmax)
     f.write("   double zbar[%i];\n" % qmax)
@@ -616,12 +624,82 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
     f = open(solver_dir + "/kkt.c", "a")
     write_license(f)
     f.write('#include "kkt.h"\n\n')
+    f.write("void ruiz_equilibration(Workspace* work){\n")
+    f.write("   for (int i = 0; i < work->settings.ruiz_iters; ++i) {\n")
+    f.write("       KKTrow_inf_norm(work->xyzbuff, work);\n")
+    f.write("       for (int i = 0; i < work->n + work->m + work->p; ++i) {\n")
+    f.write("           work->xyzbuff[i] = safe_div(1.0, qcos_sqrt(work->xyzbuff[i]));\n")
+    f.write("       }\n\n")
+
+    f.write("       // g = 1 / max(mean(Pinf), norm(c, \"inf\"));\n")
+    f.write("       double g = 0.0;\n")
+    f.write("       Pinf_norm(work->xbuff, work);\n")
+    f.write("       for (int i = 0; i < work->n; ++i) {\n")
+    f.write("           g += work->xbuff[i];\n")
+    f.write("       }\n")
+    f.write("       g /= work->n;\n")
+    f.write("       double cinf = inf_norm(work->c, work->n);\n")
+    f.write("       g = qcos_max(g, cinf);\n")
+    f.write("       g = safe_div(1.0, g);\n\n")
+    f.write("       double* D = work->xyzbuff;\n")
+    f.write("       double* E = &work->xyzbuff[work->n];\n")
+    f.write("       double* F = &work->xyzbuff[work->n + work->p];\n\n")
+
+    f.write("       // Make scalings for all variables in a second-order cone equal.\n")
+    f.write("       int idx = work->l;\n")
+    f.write("       for (int j = 0; j < work->nsoc; ++j){\n")
+    f.write("           for (int k = idx + 1; k < idx + work->q[j]; ++k){\n")
+    f.write("               F[k] = F[idx];\n")
+    f.write("           }\n")
+    f.write("       idx += work->q[j];\n")
+    f.write("       }\n\n")
+
+    f.write("       // Scale P.\n")
+    f.write("       scale_arrayf(work->P, work->P, g, work->Pnnz);\n")
+    # f.write("       equilibrate_P(D, work);\n\n")
+
+    f.write("       // Scale c.\n")
+    f.write("       scale_arrayf(work->c, work->c, g, work->n);\n")
+    f.write("       ew_product(work->c, D, work->c, work->n);\n\n")
+
+    f.write("       // Scale A.\n")
+    # f.write("       equilibrate_A(E, D, work);\n\n")
+
+    f.write("       // Scale G.\n")
+    # f.write("       equilibrate_G(F, D, work);\n\n")
+
+    f.write("       // Update scaling matrices.\n")
+    f.write("       ew_product(work->Druiz, D, work->Druiz, work->n);\n")
+    f.write("       ew_product(work->Eruiz, E, work->Eruiz, work->p);\n")
+    f.write("       ew_product(work->Fruiz, F, work->Fruiz, work->m);\n")
+    f.write("   }\n")
+    f.write("   // Scale b.\n")
+    f.write("   ew_product(work->b, work->Eruiz, work->b, work->p);\n\n")
+
+    f.write("   // Scale h.\n")
+    f.write("   ew_product(work->h, work->Fruiz, work->h, work->m);\n\n")
+
+    f.write("   // Compute Dinv, Einv, Finv.\n")
+    f.write("   for (int i = 0; i < work->n; ++i) {\n")
+    f.write("       work->Dinvruiz[i] = safe_div(1.0, work->Druiz[i]);\n")
+    f.write("   }\n")
+    f.write("   for (int i = 0; i < work->p; ++i) {\n")
+    f.write("       work->Einvruiz[i] = safe_div(1.0, work->Eruiz[i]);\n")
+    f.write("   }\n")
+    f.write("   for (int i = 0; i < work->m; ++i) {\n")
+    f.write("       work->Finvruiz[i] = safe_div(1.0, work->Fruiz[i]);\n")
+    f.write("   }\n")
+    f.write("}\n\n")
+
     f.write("void compute_kkt_residual(Workspace* work){\n")
 
     f.write("   // Zero out NT Block.\n")
-    for i in range(m**2):
-        if Wsparse2dense[i] != -1:
-            f.write("   work->WtW[%i] = 0.0;\n" % Wsparse2dense[i])
+    f.write("   for (int i = 0; i < work->Wnnz; ++i) {\n")
+    f.write("       work->WtW[i] = 0.0;\n")
+    f.write("   }\n")
+    # for i in range(m**2):
+    #     if Wsparse2dense[i] != -1:
+    #         f.write("   work->WtW[%i] = 0.0;\n" % Wsparse2dense[i])
 
     for i in range(N):
         f.write("   work->kkt_res[%i] = " % i)
@@ -761,7 +839,7 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
     f.close()
 
 
-def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2dense):
+def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2dense, Wnnz):
     # Write header.
     f = open(solver_dir + "/utils.h", "a")
     write_license(f)
@@ -798,12 +876,14 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("double dot(double* x, double* y, int n);\n")
     f.write("double inf_norm(double*x, int n);\n")
     f.write("void KKTrow_inf_norm(double* norm, Workspace* work);\n")
+    f.write("void Pinf_norm(double* norm, Workspace* work);\n")
     f.write("void Px(double* x, double* y, Workspace* work);\n")
     f.write("void Ax(double* x, double* y, Workspace* work);\n")
     f.write("void Gx(double* x, double* y, Workspace* work);\n")
     f.write("void Atx(double* x, double* y, Workspace* work);\n")
     f.write("void Gtx(double* x, double* y, Workspace* work);\n")
     f.write("void scale_arrayf(double* x, double* y, double s, int n);\n")
+    f.write("void ew_product(double* x, double* y, double* z, int n);\n")
     f.write("void axpy(double* x, double* y, double* z, double a, int n);\n")
     f.write("unsigned char check_stopping(Workspace* work);\n")
     f.write("void copy_solution(Workspace* work);\n")
@@ -861,6 +941,8 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
         f.write("   work->q[%i] = %d;\n" % (i, q[i]))
     f.write("\n")
 
+    f.write("   work->Pnnz = %i;" % Pnnz)
+    f.write("   work->Wnnz = %i;" % Wnnz)
     f.write("   work->mu = 0.0;\n")
     f.write("   work->sigma = 0.0;\n")
     f.write("   work->a = 0.0;\n")
@@ -875,6 +957,7 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("void set_default_settings(Workspace* work){\n")
     f.write("   work->settings.max_iters = 50;\n")
     f.write("   work->settings.bisect_iters = 5;\n")
+    f.write("   work->settings.ruiz_iters = 5;\n")
     f.write("   work->settings.kkt_reg = 1e-7;\n")
     f.write("   work->settings.abstol = 1e-7;\n")
     f.write("   work->settings.reltol = 1e-7;\n")
@@ -949,6 +1032,43 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
                 )
                 f.write("));\n")
     f.write("}\n\n")
+
+    f.write("void Pinf_norm(double* norm, Workspace* work){\n")
+    for i in range(n):
+        for j in range(n):
+            if write_Kelem(
+                f,
+                i,
+                j,
+                n,
+                m,
+                p,
+                P,
+                A,
+                G,
+                np.linspace(0, N - 1, N, dtype=np.int32),
+                Wsparse2dense,
+                False,
+                False,
+            ):
+                f.write("   norm[%i] = qcos_max(norm[%i], qcos_abs(" % (i, i))
+                write_Kelem(
+                    f,
+                    i,
+                    j,
+                    n,
+                    m,
+                    p,
+                    P,
+                    A,
+                    G,
+                    np.linspace(0, N - 1, N, dtype=np.int32),
+                    Wsparse2dense,
+                    False,
+                    True,
+                )
+                f.write("));\n")
+    f.write("}\n")
 
     f.write("void Px(double* x, double* y, Workspace* work){\n")
     for i in range(n):
@@ -1071,10 +1191,16 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("}\n\n")
 
     f.write("void scale_arrayf(double* x, double* y, double s, int n){\n")
-    f.write("      for (int i = 0; i < n; ++i){\n")
-    f.write("         y[i] = s * x[i];\n")
-    f.write("      }\n")
+    f.write("   for (int i = 0; i < n; ++i){\n")
+    f.write("       y[i] = s * x[i];\n")
+    f.write("   }\n")
     f.write("}\n\n")
+
+    f.write("void ew_product(double* x, double* y, double* z, int n){\n")
+    f.write("   for (int i = 0; i < n; ++i) {\n")
+    f.write("       z[i] = x[i] * y[i];\n")
+    f.write("   }\n")
+    f.write("}\n")
 
     f.write("void axpy(double* x, double* y, double* z, double a, int n) {\n")
     f.write("   for (int i = 0; i < n; ++i) {\n")
@@ -1280,9 +1406,9 @@ def generate_solver(solver_dir, m, Wsparse2dense):
     f.write("   // stopping criteria check would be triggered.\n")
     f.write("   work->a = 1.0;\n")
     f.write("   // Set NT block to I.\n")
-    for i in range(m**2):
-        if Wsparse2dense[i] != -1:
-            f.write("   work->WtW[%i] = 0.0;\n" % Wsparse2dense[i])
+    f.write("   for (int i = 0; i < work->Wnnz; ++i) {\n")
+    f.write("       work->WtW[i] = 0.0;\n")
+    f.write("   }\n")
     for i in range(m):
         f.write("   work->WtW[%i] = 1.0;\n" % Wsparse2dense[i * m + i])
 
