@@ -134,10 +134,12 @@ def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz, Wnnz):
 
     f.write("typedef struct {\n")
     f.write("   int max_iters;\n")
-    f.write("   int bisection_iters;\n")
+    f.write("   int bisect_iters;\n")
     f.write("   double kkt_reg;\n")
-    f.write("   double eabs;\n")
-    f.write("   double erel;\n")
+    f.write("   double abstol;\n")
+    f.write("   double reltol;\n")
+    f.write("   double abstol_inacc;\n")
+    f.write("   double reltol_inacc;\n")
     f.write("   unsigned char verbose;\n")
     f.write("} Settings;\n\n")
 
@@ -557,7 +559,7 @@ def generate_cone(solver_dir, m, Wnnz, Wsparse2dense):
     f.write("   double al = 0.0;\n")
     f.write("   double au = 1.0;\n")
     f.write("   double a = 0.0;\n")
-    f.write("   for (int i = 0; i < work->settings.bisection_iters; ++i) {\n")
+    f.write("   for (int i = 0; i < work->settings.bisect_iters; ++i) {\n")
     f.write("       a = 0.5 * (al + au);\n")
     f.write("       axpy(Du, u, work->ubuff1, safe_div(a, f), work->m);\n")
     f.write(
@@ -714,6 +716,13 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
     f.write("   compute_centering(work);\n")
     f.write("   construct_kkt_comb_rhs(work);\n")
     f.write("   tri_solve(work);\n\n")
+    f.write("   // Check if solution has NaNs. If NaNs are present, early exit and set a to 0.0 to trigger reduced tolerance optimality checks.\n")
+    f.write("   for (int i = 0; i < work->n + work->m + work->p; ++i) {\n")
+    f.write("       if (isnan(work->xyz[i])) {\n")
+    f.write("           work->a = 0.0;\n")
+    f.write("           return;\n")
+    f.write("       }\n")
+    f.write("   }\n")
     f.write("   // Compute Dz.\n")
     f.write(
         "   cone_division(work->lambda, work->Ds, work->ubuff1, work->l, work->nsoc, work->q);\n"
@@ -773,7 +782,7 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write('   "unsolved",\n')
     f.write('   "solved",\n')
     f.write('   "solved inaccurately",\n')
-    f.write('   "numerical error",\n')
+    f.write('   "numerical problems",\n')
     f.write('   "maximum iterations reached",\n')
     f.write("};\n\n")
 
@@ -791,6 +800,7 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("void scale_arrayf(double* x, double* y, double s, int n);\n")
     f.write("void axpy(double* x, double* y, double* z, double a, int n);\n")
     f.write("unsigned char check_stopping(Workspace* work);\n")
+    f.write("void copy_solution(Workspace* work);\n")
     f.write("#ifdef ENABLE_PRINTING\n")
     f.write("#include <stdio.h>\n")
     f.write("void print_header(Workspace* work);\n")
@@ -857,10 +867,12 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
 
     f.write("void set_default_settings(Workspace* work){\n")
     f.write("   work->settings.max_iters = 50;\n")
-    f.write("   work->settings.bisection_iters = 5;\n")
+    f.write("   work->settings.bisect_iters = 5;\n")
     f.write("   work->settings.kkt_reg = 1e-7;\n")
-    f.write("   work->settings.eabs = 1e-7;\n")
-    f.write("   work->settings.erel = 1e-7;\n")
+    f.write("   work->settings.abstol = 1e-7;\n")
+    f.write("   work->settings.reltol = 1e-7;\n")
+    f.write("   work->settings.abstol_inacc = 1e-5;\n")
+    f.write("   work->settings.reltol_inacc = 1e-5;\n")
     f.write("   work->settings.verbose = 1;\n")
     f.write("}\n\n")
 
@@ -1068,13 +1080,33 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("   // Compute max{sinf, zinf}.\n")
     f.write("   double gap_rel = qcos_max(sinf, zinf);\n\n")
 
+    f.write("   // If the solver stalled (a = 0) check if low tolerance stopping criteria is met.\n ")
+    f.write("  if(work->a < 1e-8) {\n")
+    f.write("      if (pres < work->settings.abstol_inacc + work->settings.reltol_inacc * pres_rel && dres < work->settings.abstol_inacc + work->settings.reltol_inacc * dres_rel && work->sol.gap < work->settings.abstol_inacc + work->settings.reltol_inacc * gap_rel) {\n")
+    f.write("           work->sol.status = QCOS_CUSTOM_SOLVED_INACCURATE;\n")
+    f.write("           return 1;\n")
+    f.write("      }\n")
+    f.write("      else {\n")
+    f.write("           work->sol.status = QCOS_CUSTOM_NUMERICAL_ERROR;\n")
+    f.write("           return 1;\n")
+    f.write("      }\n")
+    f.write("  }\n")
+
     f.write(
-        "   if (pres < work->settings.eabs + work->settings.erel * pres_rel && dres < work->settings.eabs + work->settings.erel * dres_rel && work->sol.gap < work->settings.eabs + work->settings.erel * gap_rel) {\n"
+        "   if (pres < work->settings.abstol + work->settings.reltol * pres_rel && dres < work->settings.abstol + work->settings.reltol * dres_rel && work->sol.gap < work->settings.abstol + work->settings.reltol * gap_rel) {\n"
     )
+    f.write("      work->sol.status = QCOS_CUSTOM_SOLVED;\n")
     f.write("      return 1;\n")
     f.write("   }\n")
     f.write("   return 0;\n")
     f.write("}\n\n")
+
+    f.write("void copy_solution(Workspace* work) {\n")  
+    f.write("   copy_arrayf(work->x, work->sol.x, work->n);\n")
+    f.write("   copy_arrayf(work->s, work->sol.s, work->m);\n")
+    f.write("   copy_arrayf(work->y, work->sol.y, work->p);\n")
+    f.write("   copy_arrayf(work->z, work->sol.z, work->m);\n")
+    f.write("}\n")
 
     Pnnz = len(P.data) if P is not None else 0
     Annz = len(A.data) if A is not None else 0
@@ -1130,10 +1162,13 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
         '   printf("| Solver Settings:                                      |\\n");\n'
     )
     f.write(
-        '   printf("|     max_iter: %-3d eabs: %3.2e erel: %3.2e      |\\n", work->settings.max_iters, work->settings.eabs, work->settings.erel);\n'
+        '   printf("|     max_iter: %-3d abstol: %3.2e reltol: %3.2e   |\\n", work->settings.max_iters, work->settings.abstol, work->settings.reltol);\n'
     )
     f.write(
-        '   printf("|     bisection_iters: %-2d static_regularization: %3.2e     |\\n", work->settings.bisection_iters, work->settings.kkt_reg);\n'
+        '   printf("|     abstol_inacc: %3.2e reltol_inacc: %3.2e     |\\n", work->settings.abstol_inacc, work->settings.reltol_inacc);\n'
+    )
+    f.write(
+        '   printf("|     bisect_iters: %-2d static_regularization: %3.2e  |\\n", work->settings.bisect_iters, work->settings.kkt_reg);\n'
     )
     f.write(
         '   printf("+-------------------------------------------------------+\\n");\n'
@@ -1187,7 +1222,11 @@ def generate_solver(solver_dir, m, Wsparse2dense):
     f = open(solver_dir + "/qcos_custom.c", "a")
     write_license(f)
     f.write('#include "qcos_custom.h"\n\n')
-    f.write("void initialize_ipm(Workspace* work){\n")
+    f.write("void initialize_ipm(Workspace* work){\n") 
+    f.write("   // Need to be set to 1.0 not 0.0 due to low tolerance stopping criteria checks\n")
+    f.write("   // which only occur when a = 0.0. If a is set to 0.0 then the low tolerance\n")
+    f.write("   // stopping criteria check would be triggered.\n")
+    f.write("   work->a = 1.0;\n")
     f.write("   // Set NT block to I.\n")
     for i in range(m**2):
         if Wsparse2dense[i] != -1:
@@ -1218,39 +1257,41 @@ def generate_solver(solver_dir, m, Wsparse2dense):
     f.write("}\n\n")
 
     f.write("void qcos_custom_solve(Workspace* work){\n")
-    f.write("#ifdef ENABLE_PRINTING\n")
-    f.write("   if (work->settings.verbose) {\n")
-    f.write("       print_header(work);\n")
-    f.write("   }\n")
-    f.write("#endif\n")
+    f.write("   #ifdef ENABLE_PRINTING\n")
+    f.write("       if (work->settings.verbose) {\n")
+    f.write("           print_header(work);\n")
+    f.write("       }\n")
+    f.write("   #endif\n")
     f.write("   initialize_ipm(work);\n")
     f.write("   for (int i = 1; i < work->settings.max_iters; ++i) {\n")
     f.write("      compute_kkt_residual(work);\n")
     f.write("      compute_mu(work);\n")
     f.write("      if (check_stopping(work)) {\n")
-    f.write("         work->sol.status = QCOS_CUSTOM_SOLVED;\n")
-    f.write("         copy_arrayf(work->x, work->sol.x, work->n);\n")
-    f.write("         copy_arrayf(work->s, work->sol.s, work->m);\n")
-    f.write("         copy_arrayf(work->y, work->sol.y, work->p);\n")
-    f.write("         copy_arrayf(work->z, work->sol.z, work->m);\n")
-    f.write("         break;\n")
+    f.write("           copy_solution(work);\n")
+    f.write("           #ifdef ENABLE_PRINTING\n")
+    f.write("               if (work->settings.verbose) {\n")
+    f.write("                   print_footer(work);\n")
+    f.write("               }\n")
+    f.write("           #endif\n")
+    f.write("         return;\n")
     f.write("      }\n")
     f.write("      compute_nt_scaling(work);\n")
     f.write("      compute_lambda(work);\n")
     f.write("      compute_WtW(work);\n")
     f.write("      predictor_corrector(work);\n")
     f.write("      work->sol.iters = i;\n")
+    f.write("       #ifdef ENABLE_PRINTING\n")
+    f.write("           if (work->settings.verbose) {\n")
+    f.write("               log_iter(work);\n")
+    f.write("           }\n")
+    f.write("       #endif\n")
+    f.write("   }\n")
+    f.write("   work->sol.status = QCOS_CUSTOM_MAX_ITER;\n")
     f.write("   #ifdef ENABLE_PRINTING\n")
     f.write("       if (work->settings.verbose) {\n")
-    f.write("           log_iter(work);\n")
+    f.write("           print_footer(work);\n")
     f.write("       }\n")
     f.write("   #endif\n")
-    f.write("   }\n")
-    f.write("#ifdef ENABLE_PRINTING\n")
-    f.write("   if (work->settings.verbose) {\n")
-    f.write("       print_footer(work);\n")
-    f.write("   }\n")
-    f.write("#endif\n")
     f.write("}\n\n")
     f.close()
 
@@ -1265,7 +1306,7 @@ def generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q):
     f.write("   Workspace work;\n")
     f.write("   load_data(&work);\n")
     f.write("   set_default_settings(&work);\n")
-    f.write("   work.settings.verbose = 0;\n")
+    f.write("   work.settings.verbose = 1;\n")
     f.write("   double N = 1000;\n")
     f.write("   double total_time = 0;\n")
     f.write("   for (int i = 0; i < N; ++i) {\n")
