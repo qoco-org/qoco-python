@@ -5,7 +5,7 @@ from datetime import datetime
 
 
 # Writes the 1D array index of the (i,j) element of the KKT matrix [P+reg*I A' G';A -reg*I 0;G 0 -W'W]
-def write_Kelem(f, i, j, n, m, p, P, A, G, perm, Wsparse2dense, reg):
+def write_Kelem(f, i, j, n, m, p, P, A, G, perm, Wsparse2dense, reg, print):
 
     # Row and column to access within KKT matrix.
     i = perm[i]
@@ -24,13 +24,13 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, perm, Wsparse2dense, reg):
             if P[i, j] == 0.0:
                 # f.write("0")
                 return False
-            else:
+            elif print:
                 # need to get index of P[i,j] in the data array for P.
                 dataidx = get_data_idx(P, i, j)
                 f.write("work->P[%d]" % dataidx)
-            if i == j and reg:
+            if i == j and reg and print:
                 f.write(" + work->settings.kkt_reg")
-        elif P is None and i == j and reg:
+        elif P is None and i == j and reg and print:
             f.write("work->settings.kkt_reg")
         else:
             return False
@@ -45,7 +45,7 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, perm, Wsparse2dense, reg):
         if A[row, col] == 0.0:
             # f.write("0")
             return False
-        else:
+        elif print:
             # need to get index of A[row,col] in the data array for A.
             dataidx = get_data_idx(A, row, col)
             f.write("work->A[%d]" % dataidx)
@@ -60,7 +60,7 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, perm, Wsparse2dense, reg):
         if G[row, col] == 0.0:
             # f.write("0")
             return False
-        else:
+        elif print:
             # need to get index of A[row,col] in the data array for A.
             dataidx = get_data_idx(G, row, col)
             f.write("work->G[%d]" % dataidx)
@@ -75,7 +75,7 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, perm, Wsparse2dense, reg):
         if row != col:
             # f.write("0")
             return False
-        elif reg:
+        elif reg and print:
             f.write("-work->settings.kkt_reg")
         else:
             return False
@@ -91,14 +91,14 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, perm, Wsparse2dense, reg):
         row = i - n - p
         col = j - n - p
 
-        # Only access lower triangular elements of W.
+        # Only access lower triangular elements of WtW.
         if row > col:
             temp = row
             row = col
             col = temp
-        if Wsparse2dense[col * m + row] != -1:
+        if Wsparse2dense[col * m + row] != -1 and print:
             f.write(" - work->WtW[%d]" % Wsparse2dense[col * m + row])
-            if row == col:
+            if row == col and print:
                 f.write(" - work->settings.kkt_reg")
         else:
             # f.write("0")

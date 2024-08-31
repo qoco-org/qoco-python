@@ -192,6 +192,7 @@ def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz, Wnnz):
     f.write("   double kkt_rhs[%i];\n" % (n + m + p))
     f.write("   double kkt_res[%i];\n" % (n + m + p))
     f.write("   double xyz[%i];\n" % (n + m + p))
+    f.write("   double delta[%i];\n" % (n + m + p))
     f.write("   double xyzbuff[%i];\n" % (n + m + p))
     f.write("   double sbar[%i];\n" % qmax)
     f.write("   double zbar[%i];\n" % qmax)
@@ -234,7 +235,7 @@ def generate_ldl(solver_dir, n, m, p, P, A, G, perm, Lidx, Wsparse2dense):
     for j in range(N):
         # D update.
         f.write("   work->D[%d] = " % j)
-        write_Kelem(f, j, j, n, m, p, P, A, G, perm, Wsparse2dense, True)
+        write_Kelem(f, j, j, n, m, p, P, A, G, perm, Wsparse2dense, True, True)
         for k in range(j):
             if Lidx[k * N + j]:
                 f.write(" - work->D[%i] * " % k)
@@ -249,7 +250,7 @@ def generate_ldl(solver_dir, n, m, p, P, A, G, perm, Lidx, Wsparse2dense):
             if Lidx[j * N + i]:
                 Lsparse2dense[j * N + i] = Lnnz
                 f.write("   work->L[%i] = " % (Lnnz))
-                write_Kelem(f, j, i, n, m, p, P, A, G, perm, Wsparse2dense, True)
+                write_Kelem(f, j, i, n, m, p, P, A, G, perm, Wsparse2dense, True, True)
                 for k in range(j):
                     if Lidx[k * N + i] and Lidx[k * N + j]:
                         f.write(
@@ -602,6 +603,7 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
     f.write('#include "cone.h"\n')
     f.write('#include "ldl.h"\n')
     f.write('#include "workspace.h"\n\n')
+    f.write("void ruiz_equilibration(Workspace* work);\n")
     f.write("void compute_kkt_residual(Workspace* work);\n")
     f.write("void construct_kkt_aff_rhs(Workspace* work);\n")
     f.write("void construct_kkt_comb_rhs(Workspace* work);\n")
@@ -637,6 +639,7 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
                 np.linspace(0, N - 1, N, dtype=np.int32),
                 Wsparse2dense,
                 False,
+                True,
             ):
                 if j < n:
                     f.write(" * work->x[%i]" % j)
@@ -716,7 +719,9 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
     f.write("   compute_centering(work);\n")
     f.write("   construct_kkt_comb_rhs(work);\n")
     f.write("   tri_solve(work);\n\n")
-    f.write("   // Check if solution has NaNs. If NaNs are present, early exit and set a to 0.0 to trigger reduced tolerance optimality checks.\n")
+    f.write(
+        "   // Check if solution has NaNs. If NaNs are present, early exit and set a to 0.0 to trigger reduced tolerance optimality checks.\n"
+    )
     f.write("   for (int i = 0; i < work->n + work->m + work->p; ++i) {\n")
     f.write("       if (isnan(work->xyz[i])) {\n")
     f.write("           work->a = 0.0;\n")
@@ -792,6 +797,7 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("void copy_and_negate_arrayf(double* x, double* y, int n);\n")
     f.write("double dot(double* x, double* y, int n);\n")
     f.write("double inf_norm(double*x, int n);\n")
+    f.write("void KKTrow_inf_norm(double* norm, Workspace* work);\n")
     f.write("void Px(double* x, double* y, Workspace* work);\n")
     f.write("void Ax(double* x, double* y, Workspace* work);\n")
     f.write("void Gx(double* x, double* y, Workspace* work);\n")
@@ -820,6 +826,7 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("   work->m = %d;\n" % m)
     f.write("   work->p = %d;\n" % p)
 
+    N = n + m + p
     Pnnz = len(P.data) if P is not None else 0
     Annz = len(A.data) if A is not None else 0
     Gnnz = len(G.data) if G is not None else 0
@@ -904,10 +911,46 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("       norm = qcos_max(norm , xi);\n")
     f.write("   }\n")
     f.write("   return norm;\n")
-    f.write("}\n")
+    f.write("}\n\n")
+
+    f.write("void KKTrow_inf_norm(double* norm, Workspace* work) {\n")
+    for i in range(N):
+        for j in range(N):
+            if write_Kelem(
+                f,
+                i,
+                j,
+                n,
+                m,
+                p,
+                P,
+                A,
+                G,
+                np.linspace(0, N - 1, N, dtype=np.int32),
+                Wsparse2dense,
+                False,
+                False,
+            ):
+                f.write("   norm[%i] = qcos_max(norm[%i], qcos_abs(" % (i, i))
+                write_Kelem(
+                    f,
+                    i,
+                    j,
+                    n,
+                    m,
+                    p,
+                    P,
+                    A,
+                    G,
+                    np.linspace(0, N - 1, N, dtype=np.int32),
+                    Wsparse2dense,
+                    False,
+                    True,
+                )
+                f.write("));\n")
+    f.write("}\n\n")
 
     f.write("void Px(double* x, double* y, Workspace* work){\n")
-    N = n + m + p
     for i in range(n):
         f.write("   y[%i] = " % i)
         for j in range(n):
@@ -924,6 +967,7 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
                 np.linspace(0, N - 1, N, dtype=np.int32),
                 Wsparse2dense,
                 False,
+                True,
             ):
                 f.write(" * x[%i]" % j)
                 f.write(" + ")
@@ -931,7 +975,6 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("}\n\n")
 
     f.write("void Ax(double* x, double* y, Workspace* work){\n")
-    N = n + m + p
     for i in range(p):
         f.write("   y[%i] = " % i)
         for j in range(n):
@@ -948,6 +991,7 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
                 np.linspace(0, N - 1, N, dtype=np.int32),
                 Wsparse2dense,
                 False,
+                True,
             ):
                 f.write(" * x[%i]" % j)
                 f.write(" + ")
@@ -955,7 +999,6 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("}\n\n")
 
     f.write("void Gx(double* x, double* y, Workspace* work){\n")
-    N = n + m + p
     for i in range(m):
         f.write("   y[%i] = " % i)
         for j in range(n):
@@ -972,6 +1015,7 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
                 np.linspace(0, N - 1, N, dtype=np.int32),
                 Wsparse2dense,
                 False,
+                True,
             ):
                 f.write(" * x[%i]" % j)
                 f.write(" + ")
@@ -979,7 +1023,6 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("}\n\n")
 
     f.write("void Atx(double* x, double* y, Workspace* work){\n")
-    N = n + m + p
     for i in range(n):
         f.write("   y[%i] = " % i)
         for j in range(p):
@@ -996,6 +1039,7 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
                 np.linspace(0, N - 1, N, dtype=np.int32),
                 Wsparse2dense,
                 False,
+                True,
             ):
                 f.write(" * x[%i]" % j)
                 f.write(" + ")
@@ -1003,7 +1047,6 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("}\n\n")
 
     f.write("void Gtx(double* x, double* y, Workspace* work){\n")
-    N = n + m + p
     for i in range(n):
         f.write("   y[%i] = " % i)
         for j in range(m):
@@ -1020,6 +1063,7 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
                 np.linspace(0, N - 1, N, dtype=np.int32),
                 Wsparse2dense,
                 False,
+                True,
             ):
                 f.write(" * x[%i]" % j)
                 f.write(" + ")
@@ -1080,9 +1124,13 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("   // Compute max{sinf, zinf}.\n")
     f.write("   double gap_rel = qcos_max(sinf, zinf);\n\n")
 
-    f.write("   // If the solver stalled (a = 0) check if low tolerance stopping criteria is met.\n ")
+    f.write(
+        "   // If the solver stalled (a = 0) check if low tolerance stopping criteria is met.\n "
+    )
     f.write("  if(work->a < 1e-8) {\n")
-    f.write("      if (pres < work->settings.abstol_inacc + work->settings.reltol_inacc * pres_rel && dres < work->settings.abstol_inacc + work->settings.reltol_inacc * dres_rel && work->sol.gap < work->settings.abstol_inacc + work->settings.reltol_inacc * gap_rel) {\n")
+    f.write(
+        "      if (pres < work->settings.abstol_inacc + work->settings.reltol_inacc * pres_rel && dres < work->settings.abstol_inacc + work->settings.reltol_inacc * dres_rel && work->sol.gap < work->settings.abstol_inacc + work->settings.reltol_inacc * gap_rel) {\n"
+    )
     f.write("           work->sol.status = QCOS_CUSTOM_SOLVED_INACCURATE;\n")
     f.write("           return 1;\n")
     f.write("      }\n")
@@ -1101,7 +1149,7 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("   return 0;\n")
     f.write("}\n\n")
 
-    f.write("void copy_solution(Workspace* work) {\n")  
+    f.write("void copy_solution(Workspace* work) {\n")
     f.write("   copy_arrayf(work->x, work->sol.x, work->n);\n")
     f.write("   copy_arrayf(work->s, work->sol.s, work->m);\n")
     f.write("   copy_arrayf(work->y, work->sol.y, work->p);\n")
@@ -1222,9 +1270,13 @@ def generate_solver(solver_dir, m, Wsparse2dense):
     f = open(solver_dir + "/qcos_custom.c", "a")
     write_license(f)
     f.write('#include "qcos_custom.h"\n\n')
-    f.write("void initialize_ipm(Workspace* work){\n") 
-    f.write("   // Need to be set to 1.0 not 0.0 due to low tolerance stopping criteria checks\n")
-    f.write("   // which only occur when a = 0.0. If a is set to 0.0 then the low tolerance\n")
+    f.write("void initialize_ipm(Workspace* work){\n")
+    f.write(
+        "   // Need to be set to 1.0 not 0.0 due to low tolerance stopping criteria checks\n"
+    )
+    f.write(
+        "   // which only occur when a = 0.0. If a is set to 0.0 then the low tolerance\n"
+    )
     f.write("   // stopping criteria check would be triggered.\n")
     f.write("   work->a = 1.0;\n")
     f.write("   // Set NT block to I.\n")
@@ -1327,6 +1379,7 @@ def generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q):
     f.write("   fwrite(&work.sol.obj, sizeof(double), 1, file);\n")
     f.write("   fwrite(&average_solvetime_ms, sizeof(double), 1, file);\n")
     f.write("   fclose(file);\n")
+    # f.write("   KKTrow_inf_norm(&work.xyz, &work);\n")
 
     # f.write("   printf(\"xyz: {\");")
     # f.write("   for(int i = 0; i < work.n + work.m + work.p; ++i){\n")
