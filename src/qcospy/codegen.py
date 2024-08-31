@@ -118,7 +118,6 @@ def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz, Wnnz):
     f.write("   double kkt_reg;\n")
     f.write("   double eabs;\n")
     f.write("   double erel;\n")
-    f.write("   unsigned char solved;\n")
     f.write("   unsigned char verbose;\n")
     f.write("} Settings;\n\n")
 
@@ -132,7 +131,7 @@ def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz, Wnnz):
     f.write("   double pres;\n")
     f.write("   double dres;\n")
     f.write("   double gap;\n")
-    f.write("   unsigned char solved;\n")
+    f.write("   unsigned char status;\n")
     f.write("} Solution;\n\n")
 
     Pnnz = len(P.data) if P is not None else 0
@@ -741,6 +740,23 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("#define qcos_sqrt(a) sqrt(a)\n")
     f.write("#define qcos_min(a, b) (((a) < (b)) ? (a) : (b))\n")
     f.write("#define qcos_max(a, b) (((a) > (b)) ? (a) : (b))\n\n")
+
+    f.write("enum qcos_custom_solve_status {\n")
+    f.write("   QCOS_CUSTOM_UNSOLVED = 0,\n")
+    f.write("   QCOS_CUSTOM_SOLVED,\n")
+    f.write("   QCOS_CUSTOM_SOLVED_INACCURATE,\n")
+    f.write("   QCOS_CUSTOM_NUMERICAL_ERROR,\n")
+    f.write("   QCOS_CUSTOM_MAX_ITER,\n")
+    f.write("};\n\n")
+
+    f.write("static const char *QCOS_CUSTOM_SOLVE_STATUS_MESSAGE[] = {\n")
+    f.write('   "unsolved",\n')
+    f.write('   "solved",\n')
+    f.write('   "solved inaccurately",\n')
+    f.write('   "numerical error",\n')
+    f.write('   "maximum iterations reached",\n')
+    f.write("};\n\n")
+
     f.write("void load_data(Workspace* work);\n")
     f.write("void set_default_settings(Workspace* work);\n")
     f.write("void copy_arrayf(double* x, double* y, int n);\n")
@@ -816,7 +832,7 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("   work->sol.dres = 0;\n")
     f.write("   work->sol.gap = 0;\n")
     f.write("   work->sol.obj = 0;\n")
-    f.write("   work->sol.solved = 0;\n")
+    f.write("   work->sol.status = QCOS_CUSTOM_UNSOLVED;\n")
     f.write("}\n\n")
 
     f.write("void set_default_settings(Workspace* work){\n")
@@ -825,7 +841,6 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("   work->settings.kkt_reg = 1e-7;\n")
     f.write("   work->settings.eabs = 1e-7;\n")
     f.write("   work->settings.erel = 1e-7;\n")
-    f.write("   work->settings.solved = 0;\n")
     f.write("   work->settings.verbose = 1;\n")
     f.write("}\n\n")
 
@@ -1116,7 +1131,9 @@ def generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2de
     f.write("}\n\n")
 
     f.write("void print_footer(Workspace* work){\n")
-    f.write('       printf("\\nsolved: %d ", work->sol.solved);\n')
+    f.write(
+        '       printf("\\nstatus: %s ", QCOS_CUSTOM_SOLVE_STATUS_MESSAGE[work->sol.status]);\n'
+    )
     f.write('       printf("\\nnumber of iterations: %d ", work->sol.iters);\n')
     f.write('       printf("\\nobjective: %f ", work->sol.obj);\n')
     f.write("}\n\n")
@@ -1191,7 +1208,7 @@ def generate_solver(solver_dir, m, Wsparse2dense):
     f.write("      compute_kkt_residual(work);\n")
     f.write("      compute_mu(work);\n")
     f.write("      if (check_stopping(work)) {\n")
-    f.write("         work->sol.solved = 1;\n")
+    f.write("         work->sol.status = QCOS_CUSTOM_SOLVED;\n")
     f.write("         copy_arrayf(work->x, work->sol.x, work->n);\n")
     f.write("         copy_arrayf(work->s, work->sol.s, work->m);\n")
     f.write("         copy_arrayf(work->y, work->sol.y, work->p);\n")
@@ -1245,7 +1262,7 @@ def generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q):
     f.write('   printf("\\nTotal Time: %.9f ms", 1e3 * total_time);\n')
     f.write('   printf("\\nAverage Solvetime: %.9f ms", 1e3 * total_time / N);\n')
     f.write('   FILE *file = fopen("result.bin", "wb");\n')
-    f.write("   fwrite(&work.sol.solved, sizeof(unsigned char), 1, file);\n")
+    f.write("   fwrite(&work.sol.status, sizeof(unsigned char), 1, file);\n")
     f.write("   fwrite(&work.sol.obj, sizeof(double), 1, file);\n")
     f.write("   fwrite(&average_solvetime_ms, sizeof(double), 1, file);\n")
     f.write("   fclose(file);\n")

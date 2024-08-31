@@ -6,6 +6,7 @@ import numpy as np
 from scipy import sparse
 from types import SimpleNamespace
 from qcospy.codegen import _generate_solver
+import time
 
 
 class QCOS:
@@ -141,6 +142,7 @@ class QCOS:
         return results
 
     def generate_solver(self, output_dir=".", name="qcos_custom"):
+        start_time = time.time()
         _generate_solver(
             self.n,
             self.m,
@@ -157,3 +159,11 @@ class QCOS:
             output_dir,
             name,
         )
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        mins, secs = divmod(elapsed_time, 60)
+        if mins > 0:
+            formatted_time = f"{int(mins):03} mins {secs:06.3f} secs"
+        else:
+            formatted_time = f"{secs:06.3f} secs"
+        print(f"\nQCOS Custom Generation Time: {formatted_time}")
