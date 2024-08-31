@@ -8,6 +8,8 @@ import numpy as np
 from scipy import sparse
 from qcospy.codegen_utils import *
 
+# from concurrent.futures import ThreadPoolExecutor
+
 
 def _generate_solver(n, m, p, P, c, A, b, G, h, l, nsoc, q, output_dir, name):
     solver_dir = output_dir + "/" + name
@@ -62,11 +64,29 @@ def _generate_solver(n, m, p, P, c, A, b, G, h, l, nsoc, q, output_dir, name):
             if L[i, j] != 0.0:
                 Lidx[j * N + i] = True
 
+    # tasks = [
+    #     lambda: generate_ldl(solver_dir, n, m, p, P, A, G, perm, Lidx, Wsparse2dense),
+    #     lambda: generate_cone(solver_dir, m, Wnnz, Wsparse2dense),
+    #     lambda: generate_kkt(
+    #         solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense
+    #     ),
+    #     lambda: generate_utils(
+    #         solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2dense
+    #     ),
+    # ]
+
+    # generate_cmakelists(solver_dir)
+    # generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, L.nnz, Wnnz)
+    # generate_solver(solver_dir, m, Wsparse2dense)
+    # generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q)
+    # with ThreadPoolExecutor() as executor:
+    #     running_tasks = [executor.submit(task) for task in tasks]
+    #     for running_task in running_tasks:
+    #         running_task.result()
+
     generate_cmakelists(solver_dir)
     generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, L.nnz, Wnnz)
-    Lsparse2dense = generate_ldl(
-        solver_dir, n, m, p, P, A, G, perm, Lidx, Wsparse2dense
-    )
+    generate_ldl(solver_dir, n, m, p, P, A, G, perm, Lidx, Wsparse2dense)
     generate_cone(solver_dir, m, Wnnz, Wsparse2dense)
     generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense)
     generate_utils(solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2dense)
