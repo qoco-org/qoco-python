@@ -98,7 +98,7 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, perm, Wsparse2dense, reg, print):
             col = temp
         if Wsparse2dense[col * m + row] != -1 and print:
             f.write(" - work->WtW[%d]" % Wsparse2dense[col * m + row])
-            if row == col and print:
+            if row == col and print and reg:
                 f.write(" - work->settings.kkt_static_reg")
         else:
             # f.write("0")

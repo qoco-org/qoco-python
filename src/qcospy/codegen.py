@@ -90,7 +90,7 @@ def _generate_solver(n, m, p, P, c, A, b, G, h, l, nsoc, q, output_dir, name):
     generate_cone(solver_dir, m, Wnnz, Wsparse2dense)
     generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense)
     generate_utils(
-        solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2dense, Wnnz
+        solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2dense, Wnnz, perm
     )
     generate_solver(solver_dir, m, Wsparse2dense)
     generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q)
@@ -138,6 +138,7 @@ def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz, Wnnz):
     f.write("   int max_iters;\n")
     f.write("   int bisect_iters;\n")
     f.write("   int ruiz_iters;\n")
+    f.write("   int iter_ref_iters;\n")
     f.write("   double kkt_static_reg;\n")
     f.write("   double kkt_dynamic_reg;\n")
     f.write("   double abstol;\n")
@@ -178,6 +179,7 @@ def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz, Wnnz):
     f.write("   int l;\n")
     f.write("   int nsoc;\n")
     f.write("   int q[%i];\n" % (len(q)))
+    f.write("   int perm[%i];\n" % (n + m + p))
     f.write("   int Pnnz;\n")
     f.write("   int Wnnz;\n")
     f.write("   double x[%i];\n" % (n))
@@ -207,6 +209,7 @@ def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz, Wnnz):
     f.write("   double k;\n")
     f.write("   double kinv;\n")
     f.write("   double xyzbuff[%i];\n" % (n + m + p))
+    f.write("   double xyzbuff2[%i];\n" % (n + m + p))
     f.write("   double sbar[%i];\n" % qmax)
     f.write("   double zbar[%i];\n" % qmax)
     f.write("   double mu;\n")
@@ -225,16 +228,21 @@ def generate_ldl(solver_dir, n, m, p, P, A, G, perm, Lidx, Wsparse2dense):
     write_license(f)
     f.write("#ifndef LDL_H\n")
     f.write("#define LDL_H\n\n")
+    f.write('#include "kkt.h"\n')
+    f.write('#include "utils.h"\n')
     f.write('#include "workspace.h"\n\n')
 
-    f.write("void ldl(Workspace* work);\n")
-    f.write("void tri_solve(Workspace* work);\n")
+    f.write("void ldl(Workspace* work);\n\n")
+    f.write("// Solves L*D*L'*xyzbuff = kkt_rhs.\n")
+    f.write("void tri_solve(Workspace* work);\n\n")
+    f.write("// Solves L*D*L'*xyz = kkt_rhs with iterative refinement.\n")
+    f.write("void kkt_solve(Workspace* work);\n")
     f.write("#endif")
     f.close()
 
     f = open(solver_dir + "/ldl.c", "a")
     write_license(f)
-    f.write('#include "workspace.h"\n\n')
+    f.write('#include "ldl.h"\n\n')
     f.write("void ldl(Workspace* work){\n")
     N = n + m + p
 
@@ -291,28 +299,62 @@ def generate_ldl(solver_dir, n, m, p, P, A, G, perm, Lidx, Wsparse2dense):
 
     f.write("void tri_solve(Workspace* work){\n")
     for i in range(N):
-        f.write("   work->xyzbuff[%i] = work->kkt_rhs[%i]" % (i, perm[i]))
+        f.write("   work->xyz[%i] = work->xyz[%i]" % (i, i))
         for j in range(i):
             if Lidx[j * N + i]:
                 f.write(
-                    " - work->L[%i] * work->xyzbuff[%i]" % (Lsparse2dense[j * N + i], j)
+                    " - work->L[%i] * work->xyz[%i]" % (Lsparse2dense[j * N + i], j)
                 )
         f.write(";\n")
 
     for i in range(N):
-        f.write("   work->xyzbuff[%i] /= work->D[%i];\n" % (i, i))
+        f.write("   work->xyz[%i] /= work->D[%i];\n" % (i, i))
 
     for i in range(N - 1, -1, -1):
-        f.write("   work->xyz[%i] = work->xyzbuff[%i]" % (perm[i], i))
+        f.write("   work->xyzbuff[%i] = work->xyz[%i]" % (i, i))
         for j in range(i + 1, N):
             if Lidx[i * N + j]:
                 f.write(
-                    " - work->L[%i] * work->xyz[%i]"
-                    % (Lsparse2dense[i * N + j], perm[j])
+                    " - work->L[%i] * work->xyzbuff[%i]" % (Lsparse2dense[i * N + j], j)
                 )
         f.write(";\n")
-    f.write("}")
+    f.write("}\n\n")
 
+    f.write("void kkt_solve(Workspace* work) {\n")
+    f.write("   // Permute kkt_rhs and store in xyz.\n")
+    f.write("   for (int j = 0; j < work->n + work->m + work->p; ++j) {\n")
+    f.write("       work->xyz[j] = work->kkt_rhs[work->perm[j]];\n")
+    f.write("   }\n")
+    f.write(
+        "   copy_arrayf(work->xyz, work->kkt_rhs, work->n + work->p + work->m);\n\n"
+    )
+
+    f.write("   // Solve xyzbuff = K \ xyz.\n")
+    f.write("   tri_solve(work);\n")
+    for i in range(N):
+        f.write("   work->xyz[%i] = work->xyzbuff[%i];\n" % (perm[i], i))
+
+    f.write("   for (int i = 0; i < work->settings.iter_ref_iters; ++i) {\n")
+    f.write("       KKT_perm_product(work->xyzbuff, work->xyz, work);\n")
+    f.write("       for (int j = 0; j < work->n + work->m + work->p; ++j) {\n")
+    f.write("           work->xyz[j] = work->kkt_rhs[j] - work->xyz[j];\n")
+    f.write("       }\n")
+    f.write(
+        "       copy_arrayf(work->xyzbuff, work->xyzbuff2, work->n + work->m + work->p);\n"
+    )
+    f.write("       tri_solve(work);\n")
+    f.write(
+        "       axpy(work->xyzbuff2, work->xyzbuff, work->xyz, 1.0, work->n + work->m + work->p);\n"
+    )
+    f.write(
+        "       copy_arrayf(work->xyz, work->xyzbuff, work->n + work->m + work->p);\n"
+    )
+    f.write("   }\n")
+    f.write("   // Permute xyzbuff and store in xyz.\n")
+    f.write("   for (int j = 0; j < work->n + work->m + work->p; ++j) {\n")
+    f.write("       work->xyz[work->perm[j]] = work->xyzbuff[j];\n")
+    f.write("   }\n")
+    f.write("}\n")
     f.close()
     return Lsparse2dense
 
@@ -631,8 +673,10 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
     f.write('#include "ldl.h"\n')
     f.write('#include "workspace.h"\n\n')
     f.write("void ruiz_equilibration(Workspace* work);\n")
-    f.write("void unequilibrate_data(Workspace* work);\n")
-    f.write("void KKT_product(double* x, double* y, Workspace* work);\n")
+    f.write("void unequilibrate_data(Workspace* work);\n\n")
+    # f.write("void KKT_product(double* x, double* y, Workspace* work);\n")
+    f.write("// Computes y = K * x where K is the permuted KKT matrix.\n")
+    f.write("void KKT_perm_product(double* x, double* y, Workspace* work);\n")
     f.write("void compute_kkt_residual(Workspace* work);\n")
     f.write("void construct_kkt_aff_rhs(Workspace* work);\n")
     f.write("void construct_kkt_comb_rhs(Workspace* work);\n")
@@ -745,7 +789,31 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
     f.write("   ew_product(work->h, work->Finvruiz, work->h, work->m);\n")
     f.write("}\n\n")
 
-    f.write("void KKT_product(double* x, double* y, Workspace* work) {\n")
+    # f.write("void KKT_product(double* x, double* y, Workspace* work) {\n")
+    # for i in range(N):
+    #     f.write("   y[%i] = " % i)
+    #     for j in range(N):
+    #         if write_Kelem(
+    #             f,
+    #             i,
+    #             j,
+    #             n,
+    #             m,
+    #             p,
+    #             P,
+    #             A,
+    #             G,
+    #             np.linspace(0, N - 1, N, dtype=np.int32),
+    #             Wsparse2dense,
+    #             False,
+    #             True,
+    #         ):
+    #             f.write(" * x[%i]" % j)
+    #             f.write(" + ")
+    #     f.write("0;\n")
+    # f.write("}\n")
+
+    f.write("void KKT_perm_product(double* x, double* y, Workspace* work) {\n")
     for i in range(N):
         f.write("   y[%i] = " % i)
         for j in range(N):
@@ -759,7 +827,7 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
                 P,
                 A,
                 G,
-                np.linspace(0, N - 1, N, dtype=np.int32),
+                perm,
                 Wsparse2dense,
                 False,
                 True,
@@ -776,18 +844,25 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
     f.write("       work->WtW[i] = 0.0;\n")
     f.write("   }\n")
 
-    f.write("   // Load [x;y;z] into xyz.\n")
+    f.write("   // Load [x;y;z] into xyzbuff.\n")
     f.write("   for (int i = 0; i < work->n; ++i) {\n")
-    f.write("       work->xyz[i] = work->x[i];\n")
+    f.write("       work->xyzbuff[i] = work->x[i];\n")
     f.write("   }\n")
     f.write("   for (int i = 0; i < work->p; ++i) {\n")
-    f.write("       work->xyz[i + work->n] = work->y[i];\n")
+    f.write("       work->xyzbuff[i + work->n] = work->y[i];\n")
     f.write("   }\n")
     f.write("   for (int i = 0; i < work->m; ++i) {\n")
-    f.write("       work->xyz[i + work->n + work->p] = work->z[i];\n")
-    f.write("   }\n")
-    f.write("   KKT_product(work->xyz, work->kkt_res, work);\n\n")
-
+    f.write("       work->xyzbuff[i + work->n + work->p] = work->z[i];\n")
+    f.write("   }\n\n")
+    f.write("   // Permute xyzbuff and store into xyz.\n")
+    f.write("   for (int i = 0; i < work->n + work->p + work->m; ++i) {\n")
+    f.write("       work->xyz[i] = work->xyzbuff[work->perm[i]];\n")
+    f.write("   }\n\n")
+    f.write("   KKT_perm_product(work->xyz, work->xyzbuff, work);\n\n")
+    f.write("   // Permute xyzbuff and store into xyz.\n")
+    f.write("   for (int i = 0; i < work->n + work->p + work->m; ++i) {\n")
+    f.write("       work->kkt_res[work->perm[i]] = work->xyzbuff[i];\n")
+    f.write("   }\n\n")
     f.write("   // Add [c;-b;-h+s].\n")
     f.write("   for (int i = 0; i < work->n; ++i) {\n")
     f.write("       work->kkt_res[i] += work->c[i];\n")
@@ -796,7 +871,9 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
     f.write("       work->kkt_res[i + work->n] -= work->b[i];\n")
     f.write("   }\n")
     f.write("   for (int i = 0; i < work->m; ++i) {\n")
-    f.write("       work->kkt_res[i + work->n + work->p] += (work->s[i] - work->h[i]);\n")
+    f.write(
+        "       work->kkt_res[i + work->n + work->p] += (work->s[i] - work->h[i]);\n"
+    )
     f.write("   }\n\n")
     f.write("}\n\n")
 
@@ -848,7 +925,7 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
     f.write("   // Construct rhs for affine scaling direction.\n")
     f.write("   construct_kkt_aff_rhs(work);\n\n")
     f.write("   // Solve KKT system to get affine scaling direction.\n")
-    f.write("   tri_solve(work);\n\n")
+    f.write("   kkt_solve(work);\n\n")
     f.write("   // Compute Dsaff.\n")
     f.write("   nt_multiply(work->W, &work->xyz[work->n + work->p], work->ubuff1);\n")
     f.write("   for (int i = 0; i < work->m; ++i) {\n")
@@ -857,7 +934,7 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
     f.write("   nt_multiply(work->W, work->ubuff1, work->Ds);\n\n")
     f.write("   compute_centering(work);\n")
     f.write("   construct_kkt_comb_rhs(work);\n")
-    f.write("   tri_solve(work);\n\n")
+    f.write("   kkt_solve(work);\n\n")
     f.write(
         "   // Check if solution has NaNs. If NaNs are present, early exit and set a to 0.0 to trigger reduced tolerance optimality checks.\n"
     )
@@ -901,7 +978,7 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
 
 
 def generate_utils(
-    solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2dense, Wnnz
+    solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2dense, Wnnz, perm
 ):
     # Write header.
     f = open(solver_dir + "/utils.h", "a")
@@ -1006,6 +1083,9 @@ def generate_utils(
         f.write("   work->q[%i] = %d;\n" % (i, q[i]))
     f.write("\n")
 
+    for i in range(len(perm)):
+        f.write("   work->perm[%i] = %d;\n" % (i, perm[i]))
+    f.write("\n")
     f.write("   work->Pnnz = %i;" % Pnnz)
     f.write("   work->Wnnz = %i;" % Wnnz)
     f.write("   work->mu = 0.0;\n")
@@ -1023,6 +1103,7 @@ def generate_utils(
     f.write("   work->settings.max_iters = 50;\n")
     f.write("   work->settings.bisect_iters = 5;\n")
     f.write("   work->settings.ruiz_iters = 5;\n")
+    f.write("   work->settings.iter_ref_iters = 3;\n")
     f.write("   work->settings.kkt_static_reg = 1e-7;\n")
     f.write("   work->settings.kkt_dynamic_reg = 1e-7;\n")
     f.write("   work->settings.abstol = 1e-7;\n")
@@ -1503,6 +1584,9 @@ def generate_utils(
         '   printf("|     ruiz_iters: %-2d dynamic_regularization: %3.2e   |\\n", work->settings.ruiz_iters, work->settings.kkt_dynamic_reg);\n'
     )
     f.write(
+        '   printf("|     iterative_refine_iters: %-2d                        |\\n", work->settings.iter_ref_iters);\n'
+    )
+    f.write(
         '   printf("+-------------------------------------------------------+\\n");\n'
     )
     f.write('   printf("\\n");\n')
@@ -1585,7 +1669,7 @@ def generate_solver(solver_dir, m, Wsparse2dense):
     f.write("       work->kkt_rhs[work->n + work->p + i] = work->h[i];\n")
     f.write("   }\n\n")
     f.write("   ldl(work);\n")
-    f.write("   tri_solve(work);\n")
+    f.write("   kkt_solve(work);\n")
     f.write("   copy_arrayf(work->xyz, work->x, work->n);\n")
     f.write("   copy_arrayf(&work->xyz[work->n], work->y, work->p);\n")
     f.write("   copy_arrayf(&work->xyz[work->n + work->p], work->z, work->m);\n")
