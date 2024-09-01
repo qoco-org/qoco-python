@@ -632,6 +632,7 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
     f.write('#include "workspace.h"\n\n')
     f.write("void ruiz_equilibration(Workspace* work);\n")
     f.write("void unequilibrate_data(Workspace* work);\n")
+    f.write("void KKT_product(double* x, double* y, Workspace* work);\n")
     f.write("void compute_kkt_residual(Workspace* work);\n")
     f.write("void construct_kkt_aff_rhs(Workspace* work);\n")
     f.write("void construct_kkt_comb_rhs(Workspace* work);\n")
@@ -739,20 +740,14 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
     f.write("   ruiz_scale_KKT(work->xyzbuff, work);\n")
     f.write("   scale_arrayf(work->P, work->P, work->kinv, work->Pnnz);\n")
     f.write("   scale_arrayf(work->c, work->c, work->kinv, work->n);\n")
-    f.write("   ew_product(work->c, work->Dinvruiz, work->c, work->n);\n\n")
-    f.write("   ew_product(work->b, work->Einvruiz, work->b, work->p);\n\n")
-    f.write("   ew_product(work->h, work->Finvruiz, work->h, work->m);\n\n")
+    f.write("   ew_product(work->c, work->Dinvruiz, work->c, work->n);\n")
+    f.write("   ew_product(work->b, work->Einvruiz, work->b, work->p);\n")
+    f.write("   ew_product(work->h, work->Finvruiz, work->h, work->m);\n")
     f.write("}\n\n")
 
-    f.write("void compute_kkt_residual(Workspace* work){\n")
-
-    f.write("   // Zero out NT Block.\n")
-    f.write("   for (int i = 0; i < work->Wnnz; ++i) {\n")
-    f.write("       work->WtW[i] = 0.0;\n")
-    f.write("   }\n")
-
+    f.write("void KKT_product(double* x, double* y, Workspace* work) {\n")
     for i in range(N):
-        f.write("   work->kkt_res[%i] = " % i)
+        f.write("   y[%i] = " % i)
         for j in range(N):
             if write_Kelem(
                 f,
@@ -769,24 +764,40 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
                 False,
                 True,
             ):
-                if j < n:
-                    f.write(" * work->x[%i]" % j)
-                elif j >= n and j < n + p:
-                    f.write(" * work->y[%i]" % (j - n))
-                elif j >= n + p and j < n + m + p:
-                    f.write(" * work->z[%i]" % (j - n - p))
+                f.write(" * x[%i]" % j)
                 f.write(" + ")
+        f.write("0;\n")
+    f.write("}\n")
 
-        # Add [c;-b;s-h]
-        if i < n:
-            f.write(" work->c[%i]" % i)
-        elif i >= n and i < n + p:
-            f.write(" - work->b[%i]" % (i - n))
-        elif i >= n + p and i < n + m + p:
-            f.write("work->s[%i] - work->h[%i]" % (i - n - p, i - n - p))
-        else:
-            raise ValueError("Should not happen.")
-        f.write(";\n")
+    f.write("void compute_kkt_residual(Workspace* work){\n")
+
+    f.write("   // Zero out NT Block.\n")
+    f.write("   for (int i = 0; i < work->Wnnz; ++i) {\n")
+    f.write("       work->WtW[i] = 0.0;\n")
+    f.write("   }\n")
+
+    f.write("   // Load [x;y;z] into xyz.\n")
+    f.write("   for (int i = 0; i < work->n; ++i) {\n")
+    f.write("       work->xyz[i] = work->x[i];\n")
+    f.write("   }\n")
+    f.write("   for (int i = 0; i < work->p; ++i) {\n")
+    f.write("       work->xyz[i + work->n] = work->y[i];\n")
+    f.write("   }\n")
+    f.write("   for (int i = 0; i < work->m; ++i) {\n")
+    f.write("       work->xyz[i + work->n + work->p] = work->z[i];\n")
+    f.write("   }\n")
+    f.write("   KKT_product(work->xyz, work->kkt_res, work);\n\n")
+
+    f.write("   // Add [c;-b;-h+s].\n")
+    f.write("   for (int i = 0; i < work->n; ++i) {\n")
+    f.write("       work->kkt_res[i] += work->c[i];\n")
+    f.write("   }\n")
+    f.write("   for (int i = 0; i < work->p; ++i) {\n")
+    f.write("       work->kkt_res[i + work->n] -= work->b[i];\n")
+    f.write("   }\n")
+    f.write("   for (int i = 0; i < work->m; ++i) {\n")
+    f.write("       work->kkt_res[i + work->n + work->p] += (work->s[i] - work->h[i]);\n")
+    f.write("   }\n\n")
     f.write("}\n\n")
 
     f.write("void construct_kkt_aff_rhs(Workspace* work) {\n")
