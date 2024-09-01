@@ -29,9 +29,9 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, perm, Wsparse2dense, reg, print):
                 dataidx = get_data_idx(P, i, j)
                 f.write("work->P[%d]" % dataidx)
             if i == j and reg and print:
-                f.write(" + work->settings.kkt_reg")
+                f.write(" + work->settings.kkt_static_reg")
         elif P is None and i == j and reg and print:
-            f.write("work->settings.kkt_reg")
+            f.write("work->settings.kkt_static_reg")
         else:
             return False
 
@@ -76,7 +76,7 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, perm, Wsparse2dense, reg, print):
             # f.write("0")
             return False
         elif reg and print:
-            f.write("-work->settings.kkt_reg")
+            f.write("-work->settings.kkt_static_reg")
         else:
             return False
 
@@ -99,7 +99,7 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, perm, Wsparse2dense, reg, print):
         if Wsparse2dense[col * m + row] != -1 and print:
             f.write(" - work->WtW[%d]" % Wsparse2dense[col * m + row])
             if row == col and print:
-                f.write(" - work->settings.kkt_reg")
+                f.write(" - work->settings.kkt_static_reg")
         else:
             # f.write("0")
             return False

@@ -138,7 +138,8 @@ def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz, Wnnz):
     f.write("   int max_iters;\n")
     f.write("   int bisect_iters;\n")
     f.write("   int ruiz_iters;\n")
-    f.write("   double kkt_reg;\n")
+    f.write("   double kkt_static_reg;\n")
+    f.write("   double kkt_dynamic_reg;\n")
     f.write("   double abstol;\n")
     f.write("   double reltol;\n")
     f.write("   double abstol_inacc;\n")
@@ -246,7 +247,7 @@ def generate_ldl(solver_dir, n, m, p, P, A, G, perm, Lidx, Wsparse2dense):
     # The factorization will only access strictly lower triangular elements of L.
     for j in range(N):
         # D update.
-        f.write("   work->D[%d] = " % j)
+        f.write("   work->D[%i] = " % j)
         write_Kelem(f, j, j, n, m, p, P, A, G, perm, Wsparse2dense, True, True)
         for k in range(j):
             if Lidx[k * N + j]:
@@ -256,6 +257,20 @@ def generate_ldl(solver_dir, n, m, p, P, A, G, perm, Lidx, Wsparse2dense):
                     % (Lsparse2dense[k * N + j], Lsparse2dense[k * N + j])
                 )
         f.write(";\n")
+        if perm[j] < n:
+            f.write("   if (work->D[%i] < 0) {\n" % j)
+            f.write("       work->D[%i] = work->settings.kkt_dynamic_reg;\n" % j)
+            f.write("   }\n")
+            f.write("   else {\n")
+            f.write("       work->D[%i] += work->settings.kkt_dynamic_reg;\n" % j)
+            f.write("   }\n")
+        else:
+            f.write("   if (work->D[%i] > 0) {\n" % j)
+            f.write("       work->D[%i] = -work->settings.kkt_dynamic_reg;\n" % j)
+            f.write("   }\n")
+            f.write("   else {\n")
+            f.write("       work->D[%i] -= work->settings.kkt_dynamic_reg;\n" % j)
+            f.write("   }\n")
 
         # L update.
         for i in range(j + 1, N):
@@ -997,7 +1012,8 @@ def generate_utils(
     f.write("   work->settings.max_iters = 50;\n")
     f.write("   work->settings.bisect_iters = 5;\n")
     f.write("   work->settings.ruiz_iters = 5;\n")
-    f.write("   work->settings.kkt_reg = 1e-7;\n")
+    f.write("   work->settings.kkt_static_reg = 1e-7;\n")
+    f.write("   work->settings.kkt_dynamic_reg = 1e-7;\n")
     f.write("   work->settings.abstol = 1e-7;\n")
     f.write("   work->settings.reltol = 1e-7;\n")
     f.write("   work->settings.abstol_inacc = 1e-5;\n")
@@ -1470,10 +1486,10 @@ def generate_utils(
         '   printf("|     abstol_inacc: %3.2e reltol_inacc: %3.2e     |\\n", work->settings.abstol_inacc, work->settings.reltol_inacc);\n'
     )
     f.write(
-        '   printf("|     bisect_iters: %-2d static_regularization: %3.2e  |\\n", work->settings.bisect_iters, work->settings.kkt_reg);\n'
+        '   printf("|     bisect_iters: %-2d static_regularization: %3.2e  |\\n", work->settings.bisect_iters, work->settings.kkt_static_reg);\n'
     )
     f.write(
-        '   printf("|     ruiz_iters: %-2d static_regularization: %3.2e    |\\n", work->settings.ruiz_iters, work->settings.kkt_reg);\n'
+        '   printf("|     ruiz_iters: %-2d dynamic_regularization: %3.2e   |\\n", work->settings.ruiz_iters, work->settings.kkt_dynamic_reg);\n'
     )
     f.write(
         '   printf("+-------------------------------------------------------+\\n");\n'
