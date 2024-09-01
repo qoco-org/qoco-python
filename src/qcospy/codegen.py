@@ -243,7 +243,7 @@ def generate_ldl(solver_dir, n, m, p, P, A, G, perm, Lidx, Wsparse2dense):
     f = open(solver_dir + "/ldl.c", "a")
     write_license(f)
     f.write('#include "ldl.h"\n\n')
-    f.write("void ldl(Workspace* work){\n")
+    f.write("void ldl(Workspace* work) {\n")
     N = n + m + p
 
     # Maps sparse 1D index (1,...,N^2) of L to its sparse index (1,...,Lnnz).
@@ -297,7 +297,7 @@ def generate_ldl(solver_dir, n, m, p, P, A, G, perm, Lidx, Wsparse2dense):
                 Lnnz += 1
     f.write("}\n\n")
 
-    f.write("void tri_solve(Workspace* work){\n")
+    f.write("void tri_solve(Workspace* work) {\n")
     for i in range(N):
         f.write("   work->xyz[%i] = work->xyz[%i]" % (i, i))
         for j in range(i):
@@ -397,14 +397,14 @@ def generate_cone(solver_dir, m, Wnnz, Wsparse2dense):
     write_license(f)
     f.write('#include "cone.h"\n\n')
 
-    f.write("void soc_product(double* u, double* v, double* p, int n){\n")
+    f.write("void soc_product(double* u, double* v, double* p, int n) {\n")
     f.write("   p[0] = dot(u, v, n);\n")
     f.write("   for (int i = 1; i < n; ++i) {\n")
     f.write("       p[i] = u[0] * v[i] + v[0] * u[i];\n")
     f.write("   }\n")
     f.write("}\n\n")
 
-    f.write("void soc_division(double* lam, double* v, double* d, int n){\n")
+    f.write("void soc_division(double* lam, double* v, double* d, int n) {\n")
     f.write("   double f = lam[0] * lam[0] - dot(&lam[1], &lam[1], n - 1);\n")
     f.write("   double finv = safe_div(1.0, f);\n")
     f.write("   double lam0inv = safe_div(1.0, lam[0]);\n")
@@ -417,7 +417,7 @@ def generate_cone(solver_dir, m, Wnnz, Wsparse2dense):
     f.write("   }\n")
     f.write("}\n")
 
-    f.write("double soc_residual(double* u, int n){\n")
+    f.write("double soc_residual(double* u, int n) {\n")
     f.write("   double res = 0;\n")
     f.write("   for (int i = 1; i < n; ++i) {\n")
     f.write("      res += u[i] * u[i];\n")
@@ -425,7 +425,7 @@ def generate_cone(solver_dir, m, Wnnz, Wsparse2dense):
     f.write("   res = qcos_sqrt(res) - u[0];\n")
     f.write("   return res;\n")
     f.write("}\n\n")
-    f.write("double soc_residual2(double* u, int n){\n")
+    f.write("double soc_residual2(double* u, int n) {\n")
     f.write("   double res = u[0] * u[0];\n")
     f.write("   for (int i = 1; i < n; ++i) {\n")
     f.write("      res -= u[i] * u[i];\n")
@@ -433,7 +433,7 @@ def generate_cone(solver_dir, m, Wnnz, Wsparse2dense):
     f.write("   return res;\n")
     f.write("}\n\n")
 
-    f.write("double cone_residual(double* u, int l, int nsoc, int* q){\n")
+    f.write("double cone_residual(double* u, int l, int nsoc, int* q) {\n")
     f.write("   double res = -1e7;\n")
     f.write("   int idx;\n")
     f.write("   for (idx = 0; idx < l; ++idx) {\n")
@@ -446,7 +446,7 @@ def generate_cone(solver_dir, m, Wnnz, Wsparse2dense):
     f.write("   return res;\n")
     f.write("}\n\n")
 
-    f.write("void bring2cone(double* u, int l, int nsoc, int* q){\n")
+    f.write("void bring2cone(double* u, int l, int nsoc, int* q) {\n")
     f.write("   if (cone_residual(u, l, nsoc, q) >= 0) {\n")
     f.write("      double a = 0.0;\n\n")
     f.write("      int idx;\n")
@@ -461,7 +461,7 @@ def generate_cone(solver_dir, m, Wnnz, Wsparse2dense):
     f.write("         }\n")
     f.write("         idx += q[i];\n")
     f.write("      }\n")
-    f.write("      for (idx = 0; idx < l; ++idx){\n")
+    f.write("      for (idx = 0; idx < l; ++idx) {\n")
     f.write("         u[idx] += (1 + a);\n")
     f.write("      }\n")
     f.write("      for (int i = 0; i < nsoc; ++i) {\n")
@@ -497,19 +497,19 @@ def generate_cone(solver_dir, m, Wnnz, Wsparse2dense):
     f.write("   }\n")
     f.write("}\n\n")
 
-    f.write("void compute_mu(Workspace* work){\n")
+    f.write("void compute_mu(Workspace* work) {\n")
     if m == 0:
         f.write("   work->mu = 0.0;\n")
     else:
         f.write("   work->mu = (dot(work->s, work->z, work->m) / work->m);\n")
     f.write("}\n\n")
 
-    f.write("void compute_nt_scaling(Workspace* work){\n")
+    f.write("void compute_nt_scaling(Workspace* work) {\n")
     for i in range(Wnnz):
         f.write("   work->W[%i] = 0.0;\n" % i)
         f.write("   work->Winv[%i] = 0.0;\n" % i)
     f.write("   int idx;\n")
-    f.write("   for (idx = 0; idx < work->l; ++idx){\n")
+    f.write("   for (idx = 0; idx < work->l; ++idx) {\n")
     f.write("       work->W[idx] = qcos_sqrt(safe_div(work->s[idx], work->z[idx]));\n")
     f.write("       work->Winv[idx] = safe_div(1.0, work->W[idx]);\n")
     f.write("   }\n\n")
@@ -533,7 +533,7 @@ def generate_cone(solver_dir, m, Wnnz, Wsparse2dense):
     f.write("       f = safe_div(1.0, (2 * gamma));\n\n")
     f.write("       // Overwrite sbar with wbar.\n")
     f.write("       work->sbar[0] = f * (work->sbar[0] + work->zbar[0]);\n")
-    f.write("       for (int j = 1; j < work->q[i]; ++j){\n")
+    f.write("       for (int j = 1; j < work->q[i]; ++j) {\n")
     f.write("           work->sbar[j] = f * (work->sbar[j] - work->zbar[j]);\n")
     f.write("       }\n\n")
     f.write("       // Overwrite zbar with v.\n")
@@ -579,7 +579,7 @@ def generate_cone(solver_dir, m, Wnnz, Wsparse2dense):
     f.write("   }\n")
     f.write("}\n\n")
 
-    f.write("void compute_WtW(Workspace* work){\n")
+    f.write("void compute_WtW(Workspace* work) {\n")
     for i in range(m):
         for j in range(i, m):
             if Wsparse2dense[j * m + i] != -1:
@@ -674,7 +674,6 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
     f.write('#include "workspace.h"\n\n')
     f.write("void ruiz_equilibration(Workspace* work);\n")
     f.write("void unequilibrate_data(Workspace* work);\n\n")
-    # f.write("void KKT_product(double* x, double* y, Workspace* work);\n")
     f.write("// Computes y = K * x where K is the permuted KKT matrix.\n")
     f.write("void KKT_perm_product(double* x, double* y, Workspace* work);\n")
     f.write("void compute_kkt_residual(Workspace* work);\n")
@@ -689,16 +688,16 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
     f = open(solver_dir + "/kkt.c", "a")
     write_license(f)
     f.write('#include "kkt.h"\n\n')
-    f.write("void ruiz_equilibration(Workspace* work){\n")
-    f.write("   for (int i = 0; i < work->n; ++i){\n")
+    f.write("void ruiz_equilibration(Workspace* work) {\n")
+    f.write("   for (int i = 0; i < work->n; ++i) {\n")
     f.write("       work->Druiz[i] = 1.0;\n")
     f.write("       work->Dinvruiz[i] = 1.0;\n")
     f.write("   }\n")
-    f.write("   for (int i = 0; i < work->p; ++i){\n")
+    f.write("   for (int i = 0; i < work->p; ++i) {\n")
     f.write("       work->Eruiz[i] = 1.0;\n")
     f.write("       work->Einvruiz[i] = 1.0;\n")
     f.write("   }\n")
-    f.write("   for (int i = 0; i < work->m; ++i){\n")
+    f.write("   for (int i = 0; i < work->m; ++i) {\n")
     f.write("       work->Fruiz[i] = 1.0;\n")
     f.write("       work->Finvruiz[i] = 1.0;\n")
     f.write("   }\n")
@@ -728,8 +727,8 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
     f.write("       work->k *= g;\n\n")
     f.write("       // Make scalings for all variables in a second-order cone equal.\n")
     f.write("       int idx = work->l;\n")
-    f.write("       for (int j = 0; j < work->nsoc; ++j){\n")
-    f.write("           for (int k = idx + 1; k < idx + work->q[j]; ++k){\n")
+    f.write("       for (int j = 0; j < work->nsoc; ++j) {\n")
+    f.write("           for (int k = idx + 1; k < idx + work->q[j]; ++k) {\n")
     f.write(
         "               work->xyzbuff[work->n + work->p + k] = work->xyzbuff[work->n + work->p + idx];\n"
     )
@@ -775,7 +774,7 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
     f.write("   }\n")
     f.write("}\n\n")
 
-    f.write("void unequilibrate_data(Workspace* work){\n")
+    f.write("void unequilibrate_data(Workspace* work) {\n")
     f.write("   copy_arrayf(work->Dinvruiz, work->xyzbuff, work->n);\n")
     f.write("   copy_arrayf(work->Einvruiz, &work->xyzbuff[work->n], work->p);\n")
     f.write(
@@ -788,30 +787,6 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
     f.write("   ew_product(work->b, work->Einvruiz, work->b, work->p);\n")
     f.write("   ew_product(work->h, work->Finvruiz, work->h, work->m);\n")
     f.write("}\n\n")
-
-    # f.write("void KKT_product(double* x, double* y, Workspace* work) {\n")
-    # for i in range(N):
-    #     f.write("   y[%i] = " % i)
-    #     for j in range(N):
-    #         if write_Kelem(
-    #             f,
-    #             i,
-    #             j,
-    #             n,
-    #             m,
-    #             p,
-    #             P,
-    #             A,
-    #             G,
-    #             np.linspace(0, N - 1, N, dtype=np.int32),
-    #             Wsparse2dense,
-    #             False,
-    #             True,
-    #         ):
-    #             f.write(" * x[%i]" % j)
-    #             f.write(" + ")
-    #     f.write("0;\n")
-    # f.write("}\n")
 
     f.write("void KKT_perm_product(double* x, double* y, Workspace* work) {\n")
     for i in range(N):
@@ -837,7 +812,7 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
         f.write("0;\n")
     f.write("}\n")
 
-    f.write("void compute_kkt_residual(Workspace* work){\n")
+    f.write("void compute_kkt_residual(Workspace* work) {\n")
 
     f.write("   // Zero out NT Block.\n")
     f.write("   for (int i = 0; i < work->Wnnz; ++i) {\n")
@@ -898,7 +873,7 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
     )
     f.write("   double sm = work->sigma * work->mu;\n")
     f.write("   int idx = 0;\n")
-    f.write("   for (idx = 0; idx < work->l; ++idx){\n")
+    f.write("   for (idx = 0; idx < work->l; ++idx) {\n")
     f.write("       work->ubuff3[idx] -= sm;\n")
     f.write("   }\n")
     f.write("   for (int i = 0; i < work->nsoc; ++i) {\n")
@@ -961,16 +936,16 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
     )
     f.write("   work->a = a;\n\n")
     f.write("   // Update iterate.\n")
-    f.write("   for (int i = 0; i < work->n; ++i){\n")
+    f.write("   for (int i = 0; i < work->n; ++i) {\n")
     f.write("       work->x[i] += a * work->xyz[i];\n")
     f.write("   }\n")
-    f.write("   for (int i = 0; i < work->m; ++i){\n")
+    f.write("   for (int i = 0; i < work->m; ++i) {\n")
     f.write("       work->s[i] += a * work->Ds[i];\n")
     f.write("   }\n")
-    f.write("   for (int i = 0; i < work->p; ++i){\n")
+    f.write("   for (int i = 0; i < work->p; ++i) {\n")
     f.write("       work->y[i] += a * work->xyz[work->n + i];\n")
     f.write("   }\n")
-    f.write("   for (int i = 0; i < work->m; ++i){\n")
+    f.write("   for (int i = 0; i < work->m; ++i) {\n")
     f.write("       work->z[i] += a * work->xyz[work->n + work->p + i];\n")
     f.write("   }\n")
     f.write("}\n\n")
@@ -1043,7 +1018,7 @@ def generate_utils(
     write_license(f)
     f.write('#include "utils.h"\n\n')
 
-    f.write("void load_data(Workspace* work){\n")
+    f.write("void load_data(Workspace* work) {\n")
     f.write("   work->n = %d;\n" % n)
     f.write("   work->m = %d;\n" % m)
     f.write("   work->p = %d;\n" % p)
@@ -1086,8 +1061,8 @@ def generate_utils(
     for i in range(len(perm)):
         f.write("   work->perm[%i] = %d;\n" % (i, perm[i]))
     f.write("\n")
-    f.write("   work->Pnnz = %i;" % Pnnz)
-    f.write("   work->Wnnz = %i;" % Wnnz)
+    f.write("   work->Pnnz = %i;\n" % Pnnz)
+    f.write("   work->Wnnz = %i;\n" % Wnnz)
     f.write("   work->mu = 0.0;\n")
     f.write("   work->sigma = 0.0;\n")
     f.write("   work->a = 0.0;\n")
@@ -1099,7 +1074,7 @@ def generate_utils(
     f.write("   work->sol.status = QCOS_CUSTOM_UNSOLVED;\n")
     f.write("}\n\n")
 
-    f.write("void set_default_settings(Workspace* work){\n")
+    f.write("void set_default_settings(Workspace* work) {\n")
     f.write("   work->settings.max_iters = 50;\n")
     f.write("   work->settings.bisect_iters = 5;\n")
     f.write("   work->settings.ruiz_iters = 5;\n")
@@ -1125,9 +1100,9 @@ def generate_utils(
     f.write("   }\n")
     f.write("}\n\n")
 
-    f.write("double dot(double* x, double* y, int n){\n")
+    f.write("double dot(double* x, double* y, int n) {\n")
     f.write("   double ans = 0;\n")
-    f.write("      for (int i = 0; i < n; ++i){\n")
+    f.write("      for (int i = 0; i < n; ++i) {\n")
     f.write("         ans += x[i] * y[i];\n")
     f.write("      }\n")
     f.write("   return ans;\n")
@@ -1184,7 +1159,7 @@ def generate_utils(
                 f.write("));\n")
     f.write("}\n\n")
 
-    f.write("void ruiz_scale_KKT(double* d, Workspace* work){\n")
+    f.write("void ruiz_scale_KKT(double* d, Workspace* work) {\n")
     for i in range(n):
         for j in range(i, N):
             if write_Kelem(
@@ -1221,7 +1196,7 @@ def generate_utils(
                 f.write(" *= d[%i] * d[%i];\n" % (i, j))
     f.write("}\n\n")
 
-    f.write("void Pinf_norm(double* norm, Workspace* work){\n")
+    f.write("void Pinf_norm(double* norm, Workspace* work) {\n")
     f.write("   // Clear norm buffer.\n")
     f.write("   for (int i = 0; i < work->n; ++i) {\n")
     f.write("       norm[i] = 0.0;\n")
@@ -1262,7 +1237,7 @@ def generate_utils(
                 f.write("));\n")
     f.write("}\n")
 
-    f.write("void Px(double* x, double* y, Workspace* work){\n")
+    f.write("void Px(double* x, double* y, Workspace* work) {\n")
     for i in range(n):
         f.write("   y[%i] = " % i)
         for j in range(n):
@@ -1286,7 +1261,7 @@ def generate_utils(
         f.write("0;\n")
     f.write("}\n\n")
 
-    f.write("void Ax(double* x, double* y, Workspace* work){\n")
+    f.write("void Ax(double* x, double* y, Workspace* work) {\n")
     for i in range(p):
         f.write("   y[%i] = " % i)
         for j in range(n):
@@ -1310,7 +1285,7 @@ def generate_utils(
         f.write("0;\n")
     f.write("}\n\n")
 
-    f.write("void Gx(double* x, double* y, Workspace* work){\n")
+    f.write("void Gx(double* x, double* y, Workspace* work) {\n")
     for i in range(m):
         f.write("   y[%i] = " % i)
         for j in range(n):
@@ -1334,7 +1309,7 @@ def generate_utils(
         f.write("0;\n")
     f.write("}\n\n")
 
-    f.write("void Atx(double* x, double* y, Workspace* work){\n")
+    f.write("void Atx(double* x, double* y, Workspace* work) {\n")
     for i in range(n):
         f.write("   y[%i] = " % i)
         for j in range(p):
@@ -1358,7 +1333,7 @@ def generate_utils(
         f.write("0;\n")
     f.write("}\n\n")
 
-    f.write("void Gtx(double* x, double* y, Workspace* work){\n")
+    f.write("void Gtx(double* x, double* y, Workspace* work) {\n")
     for i in range(n):
         f.write("   y[%i] = " % i)
         for j in range(m):
@@ -1382,13 +1357,13 @@ def generate_utils(
         f.write("0;\n")
     f.write("}\n\n")
 
-    f.write("void scale_arrayf(double* x, double* y, double s, int n){\n")
-    f.write("   for (int i = 0; i < n; ++i){\n")
+    f.write("void scale_arrayf(double* x, double* y, double s, int n) {\n")
+    f.write("   for (int i = 0; i < n; ++i) {\n")
     f.write("       y[i] = s * x[i];\n")
     f.write("   }\n")
     f.write("}\n\n")
 
-    f.write("void ew_product(double* x, double* y, double* z, int n){\n")
+    f.write("void ew_product(double* x, double* y, double* z, int n) {\n")
     f.write("   for (int i = 0; i < n; ++i) {\n")
     f.write("       z[i] = x[i] * y[i];\n")
     f.write("   }\n")
@@ -1400,7 +1375,7 @@ def generate_utils(
     f.write("   }\n")
     f.write("}\n\n")
 
-    f.write("unsigned char check_stopping(Workspace* work){\n")
+    f.write("unsigned char check_stopping(Workspace* work) {\n")
     f.write("   // Compute objective.\n")
     f.write("   double obj = dot(work->c, work->x, work->n);\n")
     f.write("   Px(work->x, work->xbuff, work);\n")
@@ -1491,7 +1466,7 @@ def generate_utils(
     f.write("           work->sol.status = QCOS_CUSTOM_NUMERICAL_ERROR;\n")
     f.write("           return 1;\n")
     f.write("      }\n")
-    f.write("  }\n")
+    f.write("   }\n")
 
     f.write(
         "   if (pres < work->settings.abstol + work->settings.reltol * pres_rel && dres < work->settings.abstol + work->settings.reltol * dres_rel && work->sol.gap < work->settings.abstol + work->settings.reltol * gap_rel) {\n"
@@ -1602,7 +1577,7 @@ def generate_utils(
     f.write("#endif\n")
     f.write("}\n\n")
 
-    f.write("void print_footer(Workspace* work){\n")
+    f.write("void print_footer(Workspace* work) {\n")
     f.write("#ifdef ENABLE_PRINTING\n")
     f.write(
         '       printf("\\nstatus: %s ", QCOS_CUSTOM_SOLVE_STATUS_MESSAGE[work->sol.status]);\n'
@@ -1642,7 +1617,7 @@ def generate_solver(solver_dir, m, Wsparse2dense):
     f = open(solver_dir + "/qcos_custom.c", "a")
     write_license(f)
     f.write('#include "qcos_custom.h"\n\n')
-    f.write("void initialize_ipm(Workspace* work){\n")
+    f.write("void initialize_ipm(Workspace* work) {\n")
     f.write(
         "   // Need to be set to 1.0 not 0.0 due to low tolerance stopping criteria checks\n"
     )
@@ -1659,13 +1634,13 @@ def generate_solver(solver_dir, m, Wsparse2dense):
         f.write("   work->WtW[%i] = 1.0;\n" % Wsparse2dense[i * m + i])
 
     f.write("\n   // kkt_rhs = [-c;b;h].\n")
-    f.write("   for(int i = 0; i < work->n; ++i){\n")
+    f.write("   for(int i = 0; i < work->n; ++i) {\n")
     f.write("       work->kkt_rhs[i] = -work->c[i];\n")
     f.write("   }\n")
-    f.write("   for(int i = 0; i < work->p; ++i){\n")
+    f.write("   for(int i = 0; i < work->p; ++i) {\n")
     f.write("       work->kkt_rhs[work->n + i] = work->b[i];\n")
     f.write("   }\n")
-    f.write("   for(int i = 0; i < work->m; ++i){\n")
+    f.write("   for(int i = 0; i < work->m; ++i) {\n")
     f.write("       work->kkt_rhs[work->n + work->p + i] = work->h[i];\n")
     f.write("   }\n\n")
     f.write("   ldl(work);\n")
@@ -1680,7 +1655,7 @@ def generate_solver(solver_dir, m, Wsparse2dense):
     f.write("   bring2cone(work->z, work->l, work->nsoc, work->q);\n")
     f.write("}\n\n")
 
-    f.write("void qcos_custom_solve(Workspace* work){\n")
+    f.write("void qcos_custom_solve(Workspace* work) {\n")
     f.write("   if (work->settings.verbose) {\n")
     f.write("       print_header(work);\n")
     f.write("   }\n")
@@ -1722,7 +1697,7 @@ def generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q):
     f.write("#include <stdio.h>\n")
     f.write("#include <time.h>\n")
     f.write('#include "qcos_custom.h"\n\n')
-    f.write("int main(){\n")
+    f.write("int main() {\n")
     f.write("   Workspace work;\n")
     f.write("   load_data(&work);\n")
     f.write("   set_default_settings(&work);\n")
@@ -1749,77 +1724,77 @@ def generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q):
     f.write("   fclose(file);\n")
 
     # f.write("   printf(\"\\nkkt_res: {\");")
-    # f.write("   for(int i = 0; i < work.n + work.m + work.p; ++i){\n")
+    # f.write("   for(int i = 0; i < work.n + work.m + work.p; ++i) {\n")
     # f.write("   printf(\"%f, \", work.kkt_res[i]);\n")
     # f.write("   }\n")
 
     f.write('   printf("\\nobj: %f", work.sol.obj);\n')
 
     f.write('   printf("\\n\\nx: {");')
-    f.write("   for(int i = 0; i < work.n; ++i){\n")
+    f.write("   for(int i = 0; i < work.n; ++i) {\n")
     f.write('   printf("%f, ", work.sol.x[i]);\n')
     f.write("   }\n")
 
     f.write('   printf("\\ns: {");')
-    f.write("   for(int i = 0; i < work.m; ++i){\n")
+    f.write("   for(int i = 0; i < work.m; ++i) {\n")
     f.write('   printf("%f, ", work.sol.s[i]);\n')
     f.write("   }\n")
 
     f.write('   printf("\\ny: {");')
-    f.write("   for(int i = 0; i < work.p; ++i){\n")
+    f.write("   for(int i = 0; i < work.p; ++i) {\n")
     f.write('   printf("%f, ", work.sol.y[i]);\n')
     f.write("   }\n")
 
     f.write('   printf("\\nz: {");')
-    f.write("   for(int i = 0; i < work.m; ++i){\n")
+    f.write("   for(int i = 0; i < work.m; ++i) {\n")
     f.write('   printf("%f, ", work.sol.z[i]);\n')
     f.write("   }\n")
     f.write('   printf("}\\n");\n')
 
     # f.write('   printf("\\n\\nD: {");')
-    # f.write("   for(int i = 0; i < work.n; ++i){\n")
+    # f.write("   for(int i = 0; i < work.n; ++i) {\n")
     # f.write('   printf("%f, ", work.Druiz[i]);\n')
     # f.write("   }\n")
 
     # f.write('   printf("\\nE: {");')
-    # f.write("   for(int i = 0; i < work.p; ++i){\n")
+    # f.write("   for(int i = 0; i < work.p; ++i) {\n")
     # f.write('   printf("%f, ", work.Eruiz[i]);\n')
     # f.write("   }\n")
 
     # f.write('   printf("\\nF: {");')
-    # f.write("   for(int i = 0; i < work.m; ++i){\n")
+    # f.write("   for(int i = 0; i < work.m; ++i) {\n")
     # f.write('   printf("%f, ", work.Fruiz[i]);\n')
     # f.write("   }\n")
 
     # f.write("   printf(\"\\nk: %f, \", work.k);\n")
 
     # f.write("   printf(\"\\nW: {\");")
-    # f.write("   for(int i = 0; i < 9; ++i){\n")
+    # f.write("   for(int i = 0; i < 9; ++i) {\n")
     # f.write("   printf(\"%f, \", work.W[i]);\n")
     # f.write("   }\n")
 
     # f.write("   printf(\"\\nWinv: {\");")
-    # f.write("   for(int i = 0; i < 9; ++i){\n")
+    # f.write("   for(int i = 0; i < 9; ++i) {\n")
     # f.write("   printf(\"%f, \", work.Winv[i]);\n")
     # f.write("   }\n")
 
     # f.write("   printf(\"\\nWtW: {\");")
-    # f.write("   for(int i = 0; i < 9; ++i){\n")
+    # f.write("   for(int i = 0; i < 9; ++i) {\n")
     # f.write("   printf(\"%f, \", work.WtW[i]);\n")
     # f.write("   }\n")
 
     # f.write("   printf(\"\\nlambda: {\");")
-    # f.write("   for(int i = 0; i < work.m; ++i){\n")
+    # f.write("   for(int i = 0; i < work.m; ++i) {\n")
     # f.write("   printf(\"%f, \", work.lambda[i]);\n")
     # f.write("   }\n")
 
     # f.write("   printf(\"\\nkkt_rhs: {\");")
-    # f.write("   for(int i = 0; i < work.m + work.p + work.n; ++i){\n")
+    # f.write("   for(int i = 0; i < work.m + work.p + work.n; ++i) {\n")
     # f.write("   printf(\"%f, \", work.kkt_rhs[i]);\n")
     # f.write("   }\n")
 
     # f.write("   printf(\"\\nDs: {\");")
-    # f.write("   for(int i = 0; i < work.m; ++i){\n")
+    # f.write("   for(int i = 0; i < work.m; ++i) {\n")
     # f.write("   printf(\"%f, \", work.Ds[i]);\n")
     # f.write("   }\n")
 
