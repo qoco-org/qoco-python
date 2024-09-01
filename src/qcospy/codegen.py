@@ -1430,8 +1430,8 @@ def generate_utils(
     Annz = len(A.data) if A is not None else 0
     Gnnz = len(G.data) if G is not None else 0
 
-    f.write("#ifdef ENABLE_PRINTING\n")
     f.write("void print_header(Workspace* work) {\n")
+    f.write("#ifdef ENABLE_PRINTING\n")
     f.write('   printf("\\n");\n')
     f.write(
         '   printf("+-------------------------------------------------------+\\n");\n'
@@ -1504,25 +1504,29 @@ def generate_utils(
     f.write(
         '   printf("+--------+-----------+------------+------------+------------+-----------+-----------+\\n");\n'
     )
+    f.write("#endif\n")
     f.write("}\n\n")
 
     f.write("void print_footer(Workspace* work){\n")
+    f.write("#ifdef ENABLE_PRINTING\n")
     f.write(
         '       printf("\\nstatus: %s ", QCOS_CUSTOM_SOLVE_STATUS_MESSAGE[work->sol.status]);\n'
     )
     f.write('       printf("\\nnumber of iterations: %d ", work->sol.iters);\n')
     f.write('       printf("\\nobjective: %f ", work->sol.obj);\n')
+    f.write("#endif\n")
     f.write("}\n\n")
 
     f.write("void log_iter(Workspace* work) {\n")
+    f.write("#ifdef ENABLE_PRINTING\n")
     f.write(
         'printf("|   %2d   | %+.2e | %+.3e | %+.3e | %+.3e | %+.2e |   %.3f   |\\n",work->sol.iters, work->sol.obj, work->sol.pres, work->sol.dres, work->sol.gap, work->mu, work->a);'
     )
     f.write(
         'printf("+--------+-----------+------------+------------+------------+-----------+-----------+\\n");'
     )
+    f.write("\n#endif\n")
     f.write("}\n")
-    f.write("#endif\n")
     f.close()
 
 
@@ -1582,11 +1586,9 @@ def generate_solver(solver_dir, m, Wsparse2dense):
     f.write("}\n\n")
 
     f.write("void qcos_custom_solve(Workspace* work){\n")
-    f.write("   #ifdef ENABLE_PRINTING\n")
-    f.write("       if (work->settings.verbose) {\n")
-    f.write("           print_header(work);\n")
-    f.write("       }\n")
-    f.write("   #endif\n")
+    f.write("   if (work->settings.verbose) {\n")
+    f.write("       print_header(work);\n")
+    f.write("   }\n")
     f.write("   ruiz_equilibration(work);\n")
     f.write("   initialize_ipm(work);\n")
     f.write("   for (int i = 1; i < work->settings.max_iters; ++i) {\n")
@@ -1596,11 +1598,9 @@ def generate_solver(solver_dir, m, Wsparse2dense):
     f.write("           unscale_solution(work);\n")
     f.write("           unequilibrate_data(work);\n")
     f.write("           copy_solution(work);\n")
-    f.write("           #ifdef ENABLE_PRINTING\n")
-    f.write("               if (work->settings.verbose) {\n")
-    f.write("                   print_footer(work);\n")
-    f.write("               }\n")
-    f.write("           #endif\n")
+    f.write("           if (work->settings.verbose) {\n")
+    f.write("               print_footer(work);\n")
+    f.write("           }\n")
     f.write("         return;\n")
     f.write("      }\n")
     f.write("      compute_nt_scaling(work);\n")
@@ -1608,19 +1608,15 @@ def generate_solver(solver_dir, m, Wsparse2dense):
     f.write("      compute_WtW(work);\n")
     f.write("      predictor_corrector(work);\n")
     f.write("      work->sol.iters = i;\n")
-    f.write("       #ifdef ENABLE_PRINTING\n")
-    f.write("           if (work->settings.verbose) {\n")
-    f.write("               log_iter(work);\n")
-    f.write("           }\n")
-    f.write("       #endif\n")
+    f.write("      if (work->settings.verbose) {\n")
+    f.write("           log_iter(work);\n")
+    f.write("      }\n")
     f.write("   }\n")
     f.write("   unequilibrate_data(work);\n")
     f.write("   work->sol.status = QCOS_CUSTOM_MAX_ITER;\n")
-    f.write("   #ifdef ENABLE_PRINTING\n")
-    f.write("       if (work->settings.verbose) {\n")
-    f.write("           print_footer(work);\n")
-    f.write("       }\n")
-    f.write("   #endif\n")
+    f.write("   if (work->settings.verbose) {\n")
+    f.write("       print_footer(work);\n")
+    f.write("   }\n")
     f.write("}\n\n")
     f.close()
 
