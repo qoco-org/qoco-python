@@ -1699,7 +1699,6 @@ def generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q):
     f.write('#include "qcos_custom.h"\n\n')
     f.write("int main() {\n")
     f.write("   Workspace work;\n")
-    f.write("   load_data(&work);\n")
     f.write("   set_default_settings(&work);\n")
     f.write("   work.settings.verbose = 0;\n")
     f.write("   double N = 1000;\n")
@@ -1707,6 +1706,7 @@ def generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q):
     f.write("   for (int i = 0; i < N; ++i) {\n")
     f.write("       struct timespec start, end;\n")
     f.write("       clock_gettime(CLOCK_MONOTONIC, &start);\n")
+    f.write("       load_data(&work);\n")
     f.write("       qcos_custom_solve(&work);\n")
     f.write("       clock_gettime(CLOCK_MONOTONIC, &end);\n")
     f.write(
