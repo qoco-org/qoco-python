@@ -38,6 +38,7 @@ class QCOS:
             "QCOS_UNSOLVED",
             "QCOS_SOLVED",
             "QCOS_SOLVED_INACCURATE",
+            "QCOS_NUMERICAL_ERROR",
             "QCOS_MAX_ITER",
         ]
 
