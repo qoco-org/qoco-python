@@ -273,7 +273,8 @@ PYBIND11_MODULE(qcos_ext, m)
         .def_readwrite("reltol", &QCOSSettings::reltol)
         .def_readwrite("abstol_inaccurate", &QCOSSettings::abstol_inaccurate)
         .def_readwrite("reltol_inaccurate", &QCOSSettings::reltol_inaccurate)
-        .def_readwrite("reg", &QCOSSettings::reg)
+        .def_readwrite("static_reg", &QCOSSettings::static_reg)
+        .def_readwrite("dyn_reg", &QCOSSettings::dyn_reg)
         .def_readwrite("verbose", &QCOSSettings::verbose);
 
     m.def("set_default_settings", &set_default_settings);
