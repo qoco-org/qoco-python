@@ -129,5 +129,5 @@ def test_pdg():
     opt_obj = 61243.596
     assert res.status == "QCOS_SOLVED"
     assert abs(res.obj - opt_obj) <= 1e-1
-    assert codegen_solved
+    assert codegen_solved == 1
     assert abs(codegen_obj - opt_obj) <= 1e-1

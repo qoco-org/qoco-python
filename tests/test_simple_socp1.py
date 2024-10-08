@@ -41,5 +41,5 @@ def test_simple_socp():
     opt_obj = 4.042
     assert res.status == "QCOS_SOLVED"
     assert abs(res.obj - opt_obj) <= 1e-4
-    assert codegen_solved
+    assert codegen_solved == 1
     assert abs(codegen_obj - opt_obj) <= 1e-4

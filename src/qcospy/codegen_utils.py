@@ -10,7 +10,6 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, perm, Wsparse2dense, reg, print):
     # Row and column to access within KKT matrix.
     i = perm[i]
     j = perm[j]
-
     # If accessing a lower triangular element, index the corresponding upper triangular element (Otherwise would have to add logic for accessing lower triangular blocks).
     if i > j:
         temp = i
@@ -22,8 +21,10 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, perm, Wsparse2dense, reg, print):
         # Check if element is nonzero. TODO: There should be a better way to check if an element is nonzero.
         if P is not None:
             if P[i, j] == 0.0:
-                # f.write("0")
-                return False
+                if print and reg and i == j:
+                    f.write(" + work->settings.kkt_static_reg")
+                else:
+                    return False
             elif print:
                 # need to get index of P[i,j] in the data array for P.
                 dataidx = get_data_idx(P, i, j)

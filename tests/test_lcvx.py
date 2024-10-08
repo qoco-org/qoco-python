@@ -103,5 +103,5 @@ def test_lcvx():
     opt_obj = probcp.value
     assert res.status == "QCOS_SOLVED"
     assert abs(res.obj - opt_obj) <= 1e-4
-    assert codegen_solved
+    assert codegen_solved == 1
     assert abs(codegen_obj - opt_obj) <= 1e-4
