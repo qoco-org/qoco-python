@@ -1079,7 +1079,7 @@ def generate_utils(
     f.write("   work->settings.bisect_iters = 5;\n")
     f.write("   work->settings.ruiz_iters = 5;\n")
     f.write("   work->settings.iter_ref_iters = 5;\n")
-    f.write("   work->settings.kkt_static_reg = 1e-8;\n")
+    f.write("   work->settings.kkt_static_reg = 1e-7;\n")
     f.write("   work->settings.kkt_dynamic_reg = 1e-7;\n")
     f.write("   work->settings.abstol = 1e-7;\n")
     f.write("   work->settings.reltol = 1e-7;\n")
