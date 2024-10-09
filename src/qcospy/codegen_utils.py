@@ -22,9 +22,8 @@ def write_Kelem(f, i, j, n, m, p, P, A, G, perm, Wsparse2dense, reg, print):
         if P is not None:
             if P[i, j] == 0.0:
                 if print and reg and i == j:
-                    f.write(" + work->settings.kkt_static_reg")
-                else:
-                    return False
+                    f.write(" work->settings.kkt_static_reg")
+                return False
             elif print:
                 # need to get index of P[i,j] in the data array for P.
                 dataidx = get_data_idx(P, i, j)

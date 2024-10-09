@@ -57,6 +57,11 @@ def _generate_solver(n, m, p, P, c, A, b, G, h, l, nsoc, q, output_dir, name):
     solver = qdldl.Solver(K)
     L, D, perm = solver.factors()
 
+    # Ensure that all elements of L.data are nonzero.
+    if L.nnz > 0:
+        L.data += 2 * np.max(np.abs(L.data))
+
+    # Generate Lidx which indicates which elements of L are nonzero.
     N = n + m + p
     Lidx = [False for _ in range(N**2)]
     for i in range(N):
@@ -64,36 +69,31 @@ def _generate_solver(n, m, p, P, c, A, b, G, h, l, nsoc, q, output_dir, name):
             if L[i, j] != 0.0:
                 Lidx[j * N + i] = True
 
-    # tasks = [
-    #     lambda: generate_ldl(solver_dir, n, m, p, P, A, G, perm, Lidx, Wsparse2dense),
-    #     lambda: generate_cone(solver_dir, m, Wnnz, Wsparse2dense),
-    #     lambda: generate_kkt(
-    #         solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense
-    #     ),
-    #     lambda: generate_utils(
-    #         solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2dense
-    #     ),
-    # ]
-
-    # generate_cmakelists(solver_dir)
-    # generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, L.nnz, Wnnz)
-    # generate_solver(solver_dir, m, Wsparse2dense)
-    # generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q)
-    # with ThreadPoolExecutor() as executor:
-    #     running_tasks = [executor.submit(task) for task in tasks]
-    #     for running_task in running_tasks:
-    #         running_task.result()
-
     generate_cmakelists(solver_dir)
     generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, L.nnz, Wnnz)
-    generate_ldl(solver_dir, n, m, p, P, A, G, perm, Lidx, Wsparse2dense)
     generate_cone(solver_dir, m, Wnnz, Wsparse2dense)
     generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense)
     generate_utils(
         solver_dir, n, m, p, P, c, A, b, G, h, l, nsoc, q, Wsparse2dense, Wnnz, perm
     )
+    
+    # Ensure that all elements of L.data, P.data, A.data, and G.data are nonzero.
+    # See TODO in write_Kelem()
+    # Ideally we can test if an index pair represents a structural nonzero, but a hack is
+    # to force all elements in data to be nonzero.
+    # This must be done after generate_utils, since generate_utils needs the correct numeric values of
+    # P, A, G for the load_data() function
+    if P is not None and P.nnz > 0:
+        P.data += 2 * np.max(np.abs(P.data))
+
+    if A is not None and A.nnz > 0:
+        A.data += 2 * np.max(np.abs(A.data))
+
+    if G is not None and G.nnz > 0:
+        G.data += 2 * np.max(np.abs(G.data))
+    generate_ldl(solver_dir, n, m, p, P, A, G, perm, Lidx, Wsparse2dense)
     generate_solver(solver_dir, m, Wsparse2dense)
-    generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q)
+    generate_runtest(solver_dir)
 
 
 def generate_cmakelists(solver_dir):
@@ -210,6 +210,7 @@ def generate_workspace(solver_dir, n, m, p, P, c, A, b, G, h, q, Lnnz, Wnnz):
     f.write("   double kinv;\n")
     f.write("   double xyzbuff[%i];\n" % (n + m + p))
     f.write("   double xyzbuff2[%i];\n" % (n + m + p))
+    # f.write("   double xyzbuff3[%i];\n" % (n + m + p))
     f.write("   double sbar[%i];\n" % qmax)
     f.write("   double zbar[%i];\n" % qmax)
     f.write("   double mu;\n")
@@ -266,14 +267,14 @@ def generate_ldl(solver_dir, n, m, p, P, A, G, perm, Lidx, Wsparse2dense):
                 )
         f.write(";\n")
         if perm[j] < n:
-            f.write("   if (work->D[%i] < 0) {\n" % j)
+            f.write("   if (work->D[%i] < 1e-12) {\n" % j)
             f.write("       work->D[%i] = work->settings.kkt_dynamic_reg;\n" % j)
             f.write("   }\n")
             f.write("   else {\n")
             f.write("       work->D[%i] += work->settings.kkt_dynamic_reg;\n" % j)
             f.write("   }\n")
         else:
-            f.write("   if (work->D[%i] > 0) {\n" % j)
+            f.write("   if (work->D[%i] > -1e-12) {\n" % j)
             f.write("       work->D[%i] = -work->settings.kkt_dynamic_reg;\n" % j)
             f.write("   }\n")
             f.write("   else {\n")
@@ -812,6 +813,40 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
         f.write("0;\n")
     f.write("}\n")
 
+    # f.write("void KKT_product(double* x, double* y, Workspace* work) {\n")
+    # for i in range(N):
+    #     f.write("   y[%i] = " % i)
+    #     for j in range(N):
+    #         if write_Kelem(
+    #             f,
+    #             i,
+    #             j,
+    #             n,
+    #             m,
+    #             p,
+    #             P,
+    #             A,
+    #             G,
+    #             np.linspace(0, N - 1, N, dtype=np.int32),
+    #             Wsparse2dense,
+    #             False,
+    #             True,
+    #         ):
+    #             f.write(" * x[%i]" % j)
+    #             f.write(" + ")
+    #     f.write("0;\n")
+    # f.write("}\n")
+
+    # f.write("// computes \|y-K*x\|_\inf where K is the KKT matrix.\n")
+    # f.write("double kkt_solve_verify(Workspace* work, double* x, double* y) {\n")
+    # f.write("   KKT_product(x, work->xyzbuff, work);\n")
+    # f.write("   for (int i = 0; i < work->n + work->m + work->p; ++i) {\n")
+    # f.write("       work->xyzbuff2[i] = work->xyzbuff[i] - y[i];\n")
+    # f.write("   }\n")
+    # f.write("   double res = inf_norm(work->xyzbuff2, work->n + work->m + work->p);\n")
+    # f.write("   return res;\n")
+    # f.write("}\n")
+
     f.write("void compute_kkt_residual(Workspace* work) {\n")
 
     f.write("   // Zero out NT Block.\n")
@@ -899,8 +934,11 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
     f.write("   ldl(work);\n\n")
     f.write("   // Construct rhs for affine scaling direction.\n")
     f.write("   construct_kkt_aff_rhs(work);\n\n")
+    # f.write("   copy_arrayf(work->kkt_rhs, work->xyzbuff3, work->n + work->m + work->p);\n")
     f.write("   // Solve KKT system to get affine scaling direction.\n")
     f.write("   kkt_solve(work);\n\n")
+    # f.write("   double res = kkt_solve_verify(work, work->xyz, work->xyzbuff3);\n")
+    # f.write("   printf(\"%f\", res);\n")
     f.write("   // Compute Dsaff.\n")
     f.write("   nt_multiply(work->W, &work->xyz[work->n + work->p], work->ubuff1);\n")
     f.write("   for (int i = 0; i < work->m; ++i) {\n")
@@ -989,7 +1027,7 @@ def generate_utils(
     f.write("void copy_arrayf(double* x, double* y, int n);\n")
     f.write("void copy_and_negate_arrayf(double* x, double* y, int n);\n")
     f.write("double dot(double* x, double* y, int n);\n")
-    f.write("double inf_norm(double*x, int n);\n")
+    f.write("double inf_norm(double* x, int n);\n")
     f.write("void KKTrow_inf_norm(double* norm, Workspace* work);\n")
     f.write("void ruiz_scale_KKT(double* d, Workspace* work);\n")
     f.write("void Pinf_norm(double* norm, Workspace* work);\n")
@@ -1691,7 +1729,7 @@ def generate_solver(solver_dir, m, Wsparse2dense):
     f.close()
 
 
-def generate_runtest(solver_dir, P, c, A, b, G, h, l, nsoc, q):
+def generate_runtest(solver_dir):
     f = open(solver_dir + "/runtest.c", "a")
     write_license(f)
     f.write("#include <stdio.h>\n")

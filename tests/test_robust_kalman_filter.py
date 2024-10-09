@@ -89,5 +89,4 @@ def test_robust_kalman_filter():
     assert res.status == "QCOS_SOLVED"
     assert abs(res.obj - opt_obj) <= 1e-4
     assert codegen_solved == 1
-    breakpoint()
     assert abs(codegen_obj - opt_obj) <= 1e-4

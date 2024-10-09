@@ -4,7 +4,7 @@ from scipy import sparse
 from tests.utils.run_generated_solver import *
 
 
-def test_linear_objective():
+def test_no_constraints():
 
     n = 6
     P = sparse.diags([1, 2, 3, 4, 5, 6], 0)
