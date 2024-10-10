@@ -1760,84 +1760,9 @@ def generate_runtest(solver_dir):
     f.write("   fwrite(&work.sol.obj, sizeof(double), 1, file);\n")
     f.write("   fwrite(&average_solvetime_ms, sizeof(double), 1, file);\n")
     f.write("   fclose(file);\n")
-
-    # f.write("   printf(\"\\nkkt_res: {\");")
-    # f.write("   for(int i = 0; i < work.n + work.m + work.p; ++i) {\n")
-    # f.write("   printf(\"%f, \", work.kkt_res[i]);\n")
-    # f.write("   }\n")
-
     f.write('   printf("\\nobj: %f", work.sol.obj);\n')
 
-    f.write('   printf("\\n\\nx: {");')
-    f.write("   for(int i = 0; i < work.n; ++i) {\n")
-    f.write('   printf("%f, ", work.sol.x[i]);\n')
-    f.write("   }\n")
 
-    f.write('   printf("\\ns: {");')
-    f.write("   for(int i = 0; i < work.m; ++i) {\n")
-    f.write('   printf("%f, ", work.sol.s[i]);\n')
-    f.write("   }\n")
-
-    f.write('   printf("\\ny: {");')
-    f.write("   for(int i = 0; i < work.p; ++i) {\n")
-    f.write('   printf("%f, ", work.sol.y[i]);\n')
-    f.write("   }\n")
-
-    f.write('   printf("\\nz: {");')
-    f.write("   for(int i = 0; i < work.m; ++i) {\n")
-    f.write('   printf("%f, ", work.sol.z[i]);\n')
-    f.write("   }\n")
-    f.write('   printf("}\\n");\n')
-
-    # f.write('   printf("\\n\\nD: {");')
-    # f.write("   for(int i = 0; i < work.n; ++i) {\n")
-    # f.write('   printf("%f, ", work.Druiz[i]);\n')
-    # f.write("   }\n")
-
-    # f.write('   printf("\\nE: {");')
-    # f.write("   for(int i = 0; i < work.p; ++i) {\n")
-    # f.write('   printf("%f, ", work.Eruiz[i]);\n')
-    # f.write("   }\n")
-
-    # f.write('   printf("\\nF: {");')
-    # f.write("   for(int i = 0; i < work.m; ++i) {\n")
-    # f.write('   printf("%f, ", work.Fruiz[i]);\n')
-    # f.write("   }\n")
-
-    # f.write("   printf(\"\\nk: %f, \", work.k);\n")
-
-    # f.write("   printf(\"\\nW: {\");")
-    # f.write("   for(int i = 0; i < 9; ++i) {\n")
-    # f.write("   printf(\"%f, \", work.W[i]);\n")
-    # f.write("   }\n")
-
-    # f.write("   printf(\"\\nWinv: {\");")
-    # f.write("   for(int i = 0; i < 9; ++i) {\n")
-    # f.write("   printf(\"%f, \", work.Winv[i]);\n")
-    # f.write("   }\n")
-
-    # f.write("   printf(\"\\nWtW: {\");")
-    # f.write("   for(int i = 0; i < 9; ++i) {\n")
-    # f.write("   printf(\"%f, \", work.WtW[i]);\n")
-    # f.write("   }\n")
-
-    # f.write("   printf(\"\\nlambda: {\");")
-    # f.write("   for(int i = 0; i < work.m; ++i) {\n")
-    # f.write("   printf(\"%f, \", work.lambda[i]);\n")
-    # f.write("   }\n")
-
-    # f.write("   printf(\"\\nkkt_rhs: {\");")
-    # f.write("   for(int i = 0; i < work.m + work.p + work.n; ++i) {\n")
-    # f.write("   printf(\"%f, \", work.kkt_rhs[i]);\n")
-    # f.write("   }\n")
-
-    # f.write("   printf(\"\\nDs: {\");")
-    # f.write("   for(int i = 0; i < work.m; ++i) {\n")
-    # f.write("   printf(\"%f, \", work.Ds[i]);\n")
-    # f.write("   }\n")
-
-    # f.write("   printf(\"\\nsigma: %f, \", work.sigma);\n")
-    # f.write("   printf(\"\\na: %f, \", work.a);\n")
     f.write("}")
 
     f.close()
