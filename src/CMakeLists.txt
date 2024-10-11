@@ -13,7 +13,7 @@ include(FetchContent)
 FetchContent_Declare(
   qcos
   GIT_REPOSITORY https://github.com/govindchari/qcos.git
-  GIT_TAG e0f075ab25da2a987aadd1748346f4f0929d241b
+  GIT_TAG 0e11ad4b5ce51822ff40d865d6f61e0d6f773a1b
 )
 list(POP_BACK CMAKE_MESSAGE_INDENT)
 FetchContent_MakeAvailable(qcos)
