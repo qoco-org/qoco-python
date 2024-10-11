@@ -1,4 +1,4 @@
-import qcospy as qcos
+import qoco
 import numpy as np
 from scipy import sparse
 from tests.utils.run_generated_solver import *
@@ -24,8 +24,8 @@ def test_simple_socp():
     nsoc = 1
     q = np.array([3])
 
-    # Create an QCOS object.
-    prob = qcos.QCOS()
+    # Create an QOCO object.
+    prob = qoco.QOCO()
 
     # Setup workspace.
     prob.setup(n, m, p, P, c, A, b, G, h, l, nsoc, q)
@@ -33,13 +33,13 @@ def test_simple_socp():
     # Solve problem.
     res = prob.solve()
 
-    prob.generate_solver("tests/", "qcos_custom_simple_socp1")
+    prob.generate_solver("tests/", "qoco_custom_simple_socp1")
     codegen_solved, codegen_obj, average_runtime_ms = run_generated_solver(
-        "tests/qcos_custom_simple_socp1"
+        "tests/qoco_custom_simple_socp1"
     )
 
     opt_obj = 4.042
-    assert res.status == "QCOS_SOLVED"
+    assert res.status == "QOCO_SOLVED"
     assert abs(res.obj - opt_obj) <= 1e-4
     assert codegen_solved == 1
     assert abs(codegen_obj - opt_obj) <= 1e-4

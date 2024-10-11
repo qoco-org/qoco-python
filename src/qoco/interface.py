@@ -5,11 +5,11 @@ import importlib
 import numpy as np
 from scipy import sparse
 from types import SimpleNamespace
-from qcospy.codegen import _generate_solver
+from qoco.codegen import _generate_solver
 import time
 
 
-class QCOS:
+class QOCO:
     def __init__(self, *args, **kwargs):
         self.m = None
         self.n = None
@@ -35,14 +35,14 @@ class QCOS:
         self.q = None
 
         self.solvecodes = [
-            "QCOS_UNSOLVED",
-            "QCOS_SOLVED",
-            "QCOS_SOLVED_INACCURATE",
-            "QCOS_NUMERICAL_ERROR",
-            "QCOS_MAX_ITER",
+            "QOCO_UNSOLVED",
+            "QOCO_SOLVED",
+            "QOCO_SOLVED_INACCURATE",
+            "QOCO_NUMERICAL_ERROR",
+            "QOCO_MAX_ITER",
         ]
 
-        self.ext = importlib.import_module("qcos_ext")
+        self.ext = importlib.import_module("qoco_ext")
         self._solver = None
 
     def update_settings(self, **kwargs):
@@ -50,7 +50,7 @@ class QCOS:
 
         settings_changed = False
 
-        for k in self.ext.QCOSSettings.__dict__:
+        for k in self.ext.QOCOSettings.__dict__:
             if not k.startswith("__"):
                 if k in kwargs:
                     setattr(self.settings, k, kwargs[k])
@@ -105,10 +105,10 @@ class QCOS:
             self.q = q.astype(np.int32)
         else:
             self.q = np.zeros((0), np.int32)
-        self.settings = self.ext.QCOSSettings()
+        self.settings = self.ext.QOCOSettings()
         self.ext.set_default_settings(self.settings)
         self.update_settings(**settings)
-        self._solver = self.ext.QCOSSolver(
+        self._solver = self.ext.QOCOSolver(
             self.n,
             self.m,
             self.p,
@@ -143,7 +143,7 @@ class QCOS:
         )
         return results
 
-    def generate_solver(self, output_dir=".", name="qcos_custom"):
+    def generate_solver(self, output_dir=".", name="qoco_custom"):
         start_time = time.time()
         _generate_solver(
             self.n,
@@ -168,4 +168,4 @@ class QCOS:
             formatted_time = f"{int(mins):03} mins {secs:06.3f} secs"
         else:
             formatted_time = f"{secs:06.3f} secs"
-        print(f"\nQCOS Custom Generation Time: {formatted_time}")
+        print(f"\nQOCO Custom Generation Time: {formatted_time}")

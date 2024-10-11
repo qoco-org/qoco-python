@@ -1,1 +1,1 @@
-pip install . && python3 gen.py && cd qcos_custom && mkdir build && cd build && cmake -DQCOS_CUSTOM_BUILD_TYPE:STR=Release -DENABLE_PRINTING:BOOL=TRUE .. && make && ./runtest && cd ../..
+pip install . && python3 gen.py && cd qoco_custom && mkdir build && cd build && cmake -DQOCO_CUSTOM_BUILD_TYPE:STR=Release -DENABLE_PRINTING:BOOL=TRUE .. && make && ./runtest && cd ../..

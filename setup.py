@@ -35,16 +35,16 @@ with open("requirements.txt") as f:
     required = f.read().splitlines()
 
 setup(
-    name="qcospy",
+    name="qoco",
     version="0.1.0",
     author="Govind Chari",
     author_email="govindchari1@gmail.com",
-    description="QCOS: Quadratic Objective Conic Optimization Solver",
+    description="QOCO: Quadratic Objective Conic Optimizer",
     long_description=open("README.md").read(),
     install_requires=required,
-    ext_modules=[CMakeExtension("qcos", sourcedir="src")],
+    ext_modules=[CMakeExtension("qoco", sourcedir="src")],
     cmdclass={"build_ext": CMakeBuildExt},
     package_dir={"": "src"},
-    packages=["qcospy"],
+    packages=["qoco"],
     zip_safe=False,
 )

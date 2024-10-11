@@ -3,21 +3,21 @@ project(extension)
 
 set(CMAKE_CXX_STANDARD 11)
 
-set(QCOS_BUILD_TYPE "Release")
+set(QOCO_BUILD_TYPE "Release")
 
 find_package(pybind11 REQUIRED)
 
-message(STATUS "Fetching/configuring QCOS")
+message(STATUS "Fetching/configuring QOCO")
 list(APPEND CMAKE_MESSAGE_INDENT "  ")
 include(FetchContent)
 FetchContent_Declare(
-  qcos
-  GIT_REPOSITORY https://github.com/govindchari/qcos.git
-  GIT_TAG 88c5df0d507b068306327c046d30bfec5f46d51f
+  qoco
+  GIT_REPOSITORY https://github.com/govindchari/qoco.git
+  GIT_TAG 5fa981874aa7205a58a40a9cf7ca114274208636
 )
 list(POP_BACK CMAKE_MESSAGE_INDENT)
-FetchContent_MakeAvailable(qcos)
+FetchContent_MakeAvailable(qoco)
 
-add_library(qcos_ext MODULE bindings.cpp)
-target_link_libraries(qcos_ext PRIVATE pybind11::module qcos)
-set_target_properties(qcos_ext PROPERTIES PREFIX "${PYTHON_MODULE_PREFIX}" SUFFIX "${PYTHON_MODULE_EXTENSION}")
+add_library(qoco_ext MODULE bindings.cpp)
+target_link_libraries(qoco_ext PRIVATE pybind11::module qoco)
+set_target_properties(qoco_ext PROPERTIES PREFIX "${PYTHON_MODULE_PREFIX}" SUFFIX "${PYTHON_MODULE_EXTENSION}")

@@ -1,4 +1,4 @@
-import qcospy as qcos
+import qoco
 import numpy as np
 from scipy import sparse
 from tests.utils.run_generated_solver import *
@@ -23,8 +23,8 @@ def test_linear_objective():
     G = None
     h = None
 
-    # Create an QCOS object.
-    prob = qcos.QCOS()
+    # Create an QOCO object.
+    prob = qoco.QOCO()
 
     # Setup workspace.
     prob.setup(n, m, p, P, c, A, b, G, h, l, nsoc, q)
@@ -32,13 +32,13 @@ def test_linear_objective():
     # Solve problem.
     res = prob.solve()
 
-    prob.generate_solver("tests/", "qcos_custom_no_ineq")
+    prob.generate_solver("tests/", "qoco_custom_no_ineq")
     codegen_solved, codegen_obj, average_runtime_ms = run_generated_solver(
-        "tests/qcos_custom_no_ineq"
+        "tests/qoco_custom_no_ineq"
     )
 
     opt_obj = -2.700
-    assert res.status == "QCOS_SOLVED"
+    assert res.status == "QOCO_SOLVED"
     assert abs(res.obj - opt_obj) <= 1e-4
     assert codegen_solved == 1
     assert abs(codegen_obj - opt_obj) <= 1e-4

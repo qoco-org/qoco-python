@@ -3,7 +3,7 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
-#include "qcos.h"
+#include "qoco.h"
 
 namespace py = pybind11;
 using namespace pybind11::literals;
@@ -13,16 +13,16 @@ class CSC
 public:
     CSC(py::object A);
     ~CSC();
-    QCOSCscMatrix *getcsc() const;
-    py::array_t<QCOSFloat> _x;
-    py::array_t<QCOSInt> _i;
-    py::array_t<QCOSInt> _p;
-    QCOSInt m;
-    QCOSInt n;
-    QCOSInt nnz;
+    QOCOCscMatrix *getcsc() const;
+    py::array_t<QOCOFloat> _x;
+    py::array_t<QOCOInt> _i;
+    py::array_t<QOCOInt> _p;
+    QOCOInt m;
+    QOCOInt n;
+    QOCOInt nnz;
 
 private:
-    QCOSCscMatrix *_csc;
+    QOCOCscMatrix *_csc;
 };
 
 CSC::CSC(py::object A)
@@ -49,16 +49,16 @@ CSC::CSC(py::object A)
             A = spa.attr("csc_matrix")(A);
         }
 
-        this->_p = A.attr("indptr").cast<py::array_t<QCOSInt, py::array::c_style>>();
-        this->_i = A.attr("indices").cast<py::array_t<QCOSInt, py::array::c_style>>();
-        this->_x = A.attr("data").cast<py::array_t<QCOSFloat, py::array::c_style>>();
+        this->_p = A.attr("indptr").cast<py::array_t<QOCOInt, py::array::c_style>>();
+        this->_i = A.attr("indices").cast<py::array_t<QOCOInt, py::array::c_style>>();
+        this->_x = A.attr("data").cast<py::array_t<QOCOFloat, py::array::c_style>>();
 
-        this->_csc = new QCOSCscMatrix();
+        this->_csc = new QOCOCscMatrix();
         this->_csc->m = m;
         this->_csc->n = n;
-        this->_csc->x = (QCOSFloat *)this->_x.data();
-        this->_csc->i = (QCOSInt *)this->_i.data();
-        this->_csc->p = (QCOSInt *)this->_p.data();
+        this->_csc->x = (QOCOFloat *)this->_x.data();
+        this->_csc->i = (QOCOInt *)this->_i.data();
+        this->_csc->p = (QOCOInt *)this->_p.data();
         this->_csc->nnz = A.attr("nnz").cast<int>();
 
         this->m = this->_csc->m;
@@ -67,7 +67,7 @@ CSC::CSC(py::object A)
     }
 }
 
-QCOSCscMatrix *CSC::getcsc() const
+QOCOCscMatrix *CSC::getcsc() const
 {
     return this->_csc;
 }
@@ -78,132 +78,132 @@ CSC::~CSC()
         delete this->_csc;
 }
 
-class PyQCOSSolution
+class PyQOCOSolution
 {
 public:
-    PyQCOSSolution(QCOSSolution &, QCOSInt, QCOSInt, QCOSInt);
-    py::array_t<QCOSFloat> get_x();
-    py::array_t<QCOSFloat> get_s();
-    py::array_t<QCOSFloat> get_y();
-    py::array_t<QCOSFloat> get_z();
-    QCOSSolution &_solution;
+    PyQOCOSolution(QOCOSolution &, QOCOInt, QOCOInt, QOCOInt);
+    py::array_t<QOCOFloat> get_x();
+    py::array_t<QOCOFloat> get_s();
+    py::array_t<QOCOFloat> get_y();
+    py::array_t<QOCOFloat> get_z();
+    QOCOSolution &_solution;
 
 private:
-    QCOSInt _n;
-    QCOSInt _m;
-    QCOSInt _p;
+    QOCOInt _n;
+    QOCOInt _m;
+    QOCOInt _p;
 };
 
-PyQCOSSolution::PyQCOSSolution(QCOSSolution &solution, QCOSInt n, QCOSInt m, QCOSInt p) : _n(n), _m(m), _p(p), _solution(solution)
+PyQOCOSolution::PyQOCOSolution(QOCOSolution &solution, QOCOInt n, QOCOInt m, QOCOInt p) : _n(n), _m(m), _p(p), _solution(solution)
 {
 }
 
-py::array_t<QCOSFloat> PyQCOSSolution::get_x()
+py::array_t<QOCOFloat> PyQOCOSolution::get_x()
 {
-    return py::array_t<QCOSFloat>(
+    return py::array_t<QOCOFloat>(
         {this->_n},
-        {sizeof(QCOSFloat)},
+        {sizeof(QOCOFloat)},
         this->_solution.x);
 }
 
-py::array_t<QCOSFloat> PyQCOSSolution::get_s()
+py::array_t<QOCOFloat> PyQOCOSolution::get_s()
 {
-    return py::array_t<QCOSFloat>(
+    return py::array_t<QOCOFloat>(
         {this->_m},
-        {sizeof(QCOSFloat)},
+        {sizeof(QOCOFloat)},
         this->_solution.s);
 }
 
-py::array_t<QCOSFloat> PyQCOSSolution::get_y()
+py::array_t<QOCOFloat> PyQOCOSolution::get_y()
 {
-    return py::array_t<QCOSFloat>(
+    return py::array_t<QOCOFloat>(
         {this->_p},
-        {sizeof(QCOSFloat)},
+        {sizeof(QOCOFloat)},
         this->_solution.y);
 }
 
-py::array_t<QCOSFloat> PyQCOSSolution::get_z()
+py::array_t<QOCOFloat> PyQOCOSolution::get_z()
 {
-    return py::array_t<QCOSFloat>(
+    return py::array_t<QOCOFloat>(
         {this->_m},
-        {sizeof(QCOSFloat)},
+        {sizeof(QOCOFloat)},
         this->_solution.z);
 }
 
-class PyQCOSSolver
+class PyQOCOSolver
 {
 public:
-    PyQCOSSolver(QCOSInt, QCOSInt, QCOSInt, const CSC &, const py::array_t<QCOSFloat>, const CSC &, const py::array_t<QCOSFloat>, const CSC &, const py::array_t<QCOSFloat>, QCOSInt, QCOSInt, const py::array_t<QCOSInt>, QCOSSettings *);
-    ~PyQCOSSolver();
+    PyQOCOSolver(QOCOInt, QOCOInt, QOCOInt, const CSC &, const py::array_t<QOCOFloat>, const CSC &, const py::array_t<QOCOFloat>, const CSC &, const py::array_t<QOCOFloat>, QOCOInt, QOCOInt, const py::array_t<QOCOInt>, QOCOSettings *);
+    ~PyQOCOSolver();
 
-    QCOSSettings *get_settings();
-    PyQCOSSolution &get_solution();
+    QOCOSettings *get_settings();
+    PyQOCOSolution &get_solution();
 
-    QCOSInt update_settings(const QCOSSettings &);
-    // QCOSInt update_vector_data(py::object, py::object, py::object);
-    // QCOSInt update_matrix_data(py::object, py::object, py::object);
+    QOCOInt update_settings(const QOCOSettings &);
+    // QOCOInt update_vector_data(py::object, py::object, py::object);
+    // QOCOInt update_matrix_data(py::object, py::object, py::object);
 
-    QCOSInt solve();
+    QOCOInt solve();
 
 private:
-    QCOSInt n;
-    QCOSInt m;
-    QCOSInt p;
+    QOCOInt n;
+    QOCOInt m;
+    QOCOInt p;
 
     const CSC &_P;
-    py::array_t<QCOSFloat> _c;
+    py::array_t<QOCOFloat> _c;
 
     const CSC &_A;
-    py::array_t<QCOSFloat> _b;
+    py::array_t<QOCOFloat> _b;
 
     const CSC &_G;
-    py::array_t<QCOSFloat> _h;
+    py::array_t<QOCOFloat> _h;
 
-    QCOSInt l;
-    QCOSInt nsoc;
-    py::array_t<QCOSInt> _q;
+    QOCOInt l;
+    QOCOInt nsoc;
+    py::array_t<QOCOInt> _q;
 
-    QCOSSolver *_solver;
+    QOCOSolver *_solver;
 };
 
-PyQCOSSolver::PyQCOSSolver(QCOSInt n, QCOSInt m, QCOSInt p, const CSC &P, const py::array_t<QCOSFloat> c, const CSC &A, const py::array_t<QCOSFloat> b, const CSC &G, const py::array_t<QCOSFloat> h, QCOSInt l, QCOSInt nsoc, const py::array_t<QCOSInt> q, QCOSSettings *settings) : n(n), m(m), p(p), _P(P), _c(c), _A(A), _b(b), _G(G), _h(h), l(l), nsoc(nsoc), _q(q)
+PyQOCOSolver::PyQOCOSolver(QOCOInt n, QOCOInt m, QOCOInt p, const CSC &P, const py::array_t<QOCOFloat> c, const CSC &A, const py::array_t<QOCOFloat> b, const CSC &G, const py::array_t<QOCOFloat> h, QOCOInt l, QOCOInt nsoc, const py::array_t<QOCOInt> q, QOCOSettings *settings) : n(n), m(m), p(p), _P(P), _c(c), _A(A), _b(b), _G(G), _h(h), l(l), nsoc(nsoc), _q(q)
 {
-    this->_solver = new QCOSSolver();
+    this->_solver = new QOCOSolver();
 
     py::tuple dim = this->_b.attr("shape");
-    QCOSFloat *bptr;
+    QOCOFloat *bptr;
     if (dim[0].cast<int>() == 0)
     {
-        bptr = (QCOSFloat *)nullptr;
+        bptr = (QOCOFloat *)nullptr;
     }
     else
     {
-        bptr = (QCOSFloat *)this->_b.data();
+        bptr = (QOCOFloat *)this->_b.data();
     }
 
     dim = this->_h.attr("shape");
-    QCOSFloat *hptr;
+    QOCOFloat *hptr;
     if (dim[0].cast<int>() == 0)
     {
         hptr = nullptr;
     }
     else
     {
-        hptr = (QCOSFloat *)this->_h.data();
+        hptr = (QOCOFloat *)this->_h.data();
     }
 
     dim = this->_q.attr("shape");
-    QCOSInt *qptr;
+    QOCOInt *qptr;
     if (dim[0].cast<int>() == 0)
     {
         qptr = nullptr;
     }
     else
     {
-        qptr = (QCOSInt *)this->_q.data();
+        qptr = (QOCOInt *)this->_q.data();
     }
 
-    QCOSInt status = qcos_setup(this->_solver, n, m, p, this->_P.getcsc(), (QCOSFloat *)this->_c.data(), this->_A.getcsc(), bptr, this->_G.getcsc(), hptr, l, nsoc, qptr, settings);
+    QOCOInt status = qoco_setup(this->_solver, n, m, p, this->_P.getcsc(), (QOCOFloat *)this->_c.data(), this->_A.getcsc(), bptr, this->_G.getcsc(), hptr, l, nsoc, qptr, settings);
 
     if (status)
     {
@@ -212,43 +212,43 @@ PyQCOSSolver::PyQCOSSolver(QCOSInt n, QCOSInt m, QCOSInt p, const CSC &P, const 
     }
 }
 
-PyQCOSSolver::~PyQCOSSolver()
+PyQOCOSolver::~PyQOCOSolver()
 {
-    qcos_cleanup(this->_solver);
+    qoco_cleanup(this->_solver);
 }
 
-QCOSSettings *PyQCOSSolver::get_settings()
+QOCOSettings *PyQOCOSolver::get_settings()
 {
     return this->_solver->settings;
 }
 
-PyQCOSSolution &PyQCOSSolver::get_solution()
+PyQOCOSolution &PyQOCOSolver::get_solution()
 {
-    PyQCOSSolution *solution = new PyQCOSSolution(*this->_solver->sol, this->n, this->m, this->p);
+    PyQOCOSolution *solution = new PyQOCOSolution(*this->_solver->sol, this->n, this->m, this->p);
     return *solution;
 }
 
-QCOSInt PyQCOSSolver::solve()
+QOCOInt PyQOCOSolver::solve()
 {
     py::gil_scoped_release release;
-    QCOSInt status = qcos_solve(this->_solver);
+    QOCOInt status = qoco_solve(this->_solver);
     py::gil_scoped_acquire acquire;
     return status;
 }
 
-QCOSInt PyQCOSSolver::update_settings(const QCOSSettings &new_settings)
+QOCOInt PyQOCOSolver::update_settings(const QOCOSettings &new_settings)
 {
-    return qcos_update_settings(this->_solver, &new_settings);
+    return qoco_update_settings(this->_solver, &new_settings);
 }
 
-PYBIND11_MODULE(qcos_ext, m)
+PYBIND11_MODULE(qoco_ext, m)
 {
     // Enums.
-    py::enum_<qcos_solve_status>(m, "qcos_solve_status", py::module_local())
-        .value("QCOS_UNSOLVED", QCOS_UNSOLVED)
-        .value("QCOS_SOLVED", QCOS_SOLVED)
-        .value("QCOS_SOLVED_INACCURATE", QCOS_SOLVED_INACCURATE)
-        .value("QCOS_MAX_ITER", QCOS_MAX_ITER)
+    py::enum_<qoco_solve_status>(m, "qoco_solve_status", py::module_local())
+        .value("QOCO_UNSOLVED", QOCO_UNSOLVED)
+        .value("QOCO_SOLVED", QOCO_SOLVED)
+        .value("QOCO_SOLVED_INACCURATE", QOCO_SOLVED_INACCURATE)
+        .value("QOCO_MAX_ITER", QOCO_MAX_ITER)
         .export_values();
 
     // CSC.
@@ -262,51 +262,51 @@ PYBIND11_MODULE(qcos_ext, m)
         .def_readonly("nnz", &CSC::nnz);
 
     // Settings.
-    py::class_<QCOSSettings>(m, "QCOSSettings", py::module_local())
+    py::class_<QOCOSettings>(m, "QOCOSettings", py::module_local())
         .def(py::init([]()
-                      { return new QCOSSettings(); }))
-        .def_readwrite("max_iters", &QCOSSettings::max_iters)
-        .def_readwrite("bisection_iters", &QCOSSettings::bisection_iters)
-        .def_readwrite("ruiz_iters", &QCOSSettings::ruiz_iters)
-        .def_readwrite("iterative_refinement_iterations", &QCOSSettings::iterative_refinement_iterations)
-        .def_readwrite("abstol", &QCOSSettings::abstol)
-        .def_readwrite("reltol", &QCOSSettings::reltol)
-        .def_readwrite("abstol_inaccurate", &QCOSSettings::abstol_inaccurate)
-        .def_readwrite("reltol_inaccurate", &QCOSSettings::reltol_inaccurate)
-        .def_readwrite("static_reg", &QCOSSettings::static_reg)
-        .def_readwrite("dyn_reg", &QCOSSettings::dyn_reg)
-        .def_readwrite("verbose", &QCOSSettings::verbose);
+                      { return new QOCOSettings(); }))
+        .def_readwrite("max_iters", &QOCOSettings::max_iters)
+        .def_readwrite("bisection_iters", &QOCOSettings::bisection_iters)
+        .def_readwrite("ruiz_iters", &QOCOSettings::ruiz_iters)
+        .def_readwrite("iterative_refinement_iterations", &QOCOSettings::iterative_refinement_iterations)
+        .def_readwrite("abstol", &QOCOSettings::abstol)
+        .def_readwrite("reltol", &QOCOSettings::reltol)
+        .def_readwrite("abstol_inaccurate", &QOCOSettings::abstol_inaccurate)
+        .def_readwrite("reltol_inaccurate", &QOCOSettings::reltol_inaccurate)
+        .def_readwrite("static_reg", &QOCOSettings::static_reg)
+        .def_readwrite("dyn_reg", &QOCOSettings::dyn_reg)
+        .def_readwrite("verbose", &QOCOSettings::verbose);
 
     m.def("set_default_settings", &set_default_settings);
 
     // Solution.
-    py::class_<PyQCOSSolution>(m, "QCOSSolution", py::module_local())
-        .def_property_readonly("x", &PyQCOSSolution::get_x)
-        .def_property_readonly("s", &PyQCOSSolution::get_s)
-        .def_property_readonly("y", &PyQCOSSolution::get_y)
-        .def_property_readonly("z", &PyQCOSSolution::get_z)
-        .def_property_readonly("iters", [](const PyQCOSSolution &sol)
+    py::class_<PyQOCOSolution>(m, "QOCOSolution", py::module_local())
+        .def_property_readonly("x", &PyQOCOSolution::get_x)
+        .def_property_readonly("s", &PyQOCOSolution::get_s)
+        .def_property_readonly("y", &PyQOCOSolution::get_y)
+        .def_property_readonly("z", &PyQOCOSolution::get_z)
+        .def_property_readonly("iters", [](const PyQOCOSolution &sol)
                                { return sol._solution.iters; })
-        .def_property_readonly("setup_time_sec", [](const PyQCOSSolution &sol)
+        .def_property_readonly("setup_time_sec", [](const PyQOCOSolution &sol)
                                { return sol._solution.setup_time_sec; })
-        .def_property_readonly("solve_time_sec", [](const PyQCOSSolution &sol)
+        .def_property_readonly("solve_time_sec", [](const PyQOCOSolution &sol)
                                { return sol._solution.solve_time_sec; })
-        .def_property_readonly("obj", [](const PyQCOSSolution &sol)
+        .def_property_readonly("obj", [](const PyQOCOSolution &sol)
                                { return sol._solution.obj; })
-        .def_property_readonly("pres", [](const PyQCOSSolution &sol)
+        .def_property_readonly("pres", [](const PyQOCOSolution &sol)
                                { return sol._solution.pres; })
-        .def_property_readonly("dres", [](const PyQCOSSolution &sol)
+        .def_property_readonly("dres", [](const PyQOCOSolution &sol)
                                { return sol._solution.dres; })
-        .def_property_readonly("gap", [](const PyQCOSSolution &sol)
+        .def_property_readonly("gap", [](const PyQOCOSolution &sol)
                                { return sol._solution.gap; })
-        .def_property_readonly("status", [](const PyQCOSSolution &sol)
+        .def_property_readonly("status", [](const PyQOCOSolution &sol)
                                { return sol._solution.status; });
 
     // Solver.
-    py::class_<PyQCOSSolver>(m, "QCOSSolver", py::module_local())
-        .def(py::init<QCOSInt, QCOSInt, QCOSInt, const CSC &, const py::array_t<QCOSFloat>, const CSC &, const py::array_t<QCOSFloat>, const CSC &, const py::array_t<QCOSFloat>, QCOSInt, QCOSInt, const py::array_t<QCOSInt>, QCOSSettings *>(), "n"_a, "m"_a, "p"_a, "P"_a, "c"_a.noconvert(), "A"_a, "b"_a.noconvert(), "G"_a, "h"_a.noconvert(), "l"_a, "nsoc"_a, "q"_a.noconvert(), "settings"_a)
-        .def_property_readonly("solution", &PyQCOSSolver::get_solution, py::return_value_policy::reference)
-        .def("update_settings", &PyQCOSSolver::update_settings)
-        .def("solve", &PyQCOSSolver::solve)
-        .def("get_settings", &PyQCOSSolver::get_settings, py::return_value_policy::reference);
+    py::class_<PyQOCOSolver>(m, "QOCOSolver", py::module_local())
+        .def(py::init<QOCOInt, QOCOInt, QOCOInt, const CSC &, const py::array_t<QOCOFloat>, const CSC &, const py::array_t<QOCOFloat>, const CSC &, const py::array_t<QOCOFloat>, QOCOInt, QOCOInt, const py::array_t<QOCOInt>, QOCOSettings *>(), "n"_a, "m"_a, "p"_a, "P"_a, "c"_a.noconvert(), "A"_a, "b"_a.noconvert(), "G"_a, "h"_a.noconvert(), "l"_a, "nsoc"_a, "q"_a.noconvert(), "settings"_a)
+        .def_property_readonly("solution", &PyQOCOSolver::get_solution, py::return_value_policy::reference)
+        .def("update_settings", &PyQOCOSolver::update_settings)
+        .def("solve", &PyQOCOSolver::solve)
+        .def("get_settings", &PyQOCOSolver::get_settings, py::return_value_policy::reference);
 }

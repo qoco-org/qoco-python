@@ -6,7 +6,7 @@ import shutil
 import qdldl
 import numpy as np
 from scipy import sparse
-from qcospy.codegen_utils import *
+from qoco.codegen_utils import *
 
 # from concurrent.futures import ThreadPoolExecutor
 
@@ -99,32 +99,32 @@ def _generate_solver(n, m, p, P, c, A, b, G, h, l, nsoc, q, output_dir, name):
 def generate_cmakelists(solver_dir):
     f = open(solver_dir + "/CMakeLists.txt", "a")
     f.write("cmake_minimum_required(VERSION 3.18)\n")
-    f.write("project(qcos_custom)\n\n")
+    f.write("project(qoco_custom)\n\n")
     f.write("if(ENABLE_PRINTING)\n")
     f.write("   add_compile_definitions(ENABLE_PRINTING)\n")
     f.write("endif()\n\n")
-    f.write("if(QCOS_CUSTOM_BUILD_TYPE STREQUAL Debug)\n")
-    f.write("   set(QCOS_CUSTOM_BUILD_TYPE Debug)\n")
+    f.write("if(QOCO_CUSTOM_BUILD_TYPE STREQUAL Debug)\n")
+    f.write("   set(QOCO_CUSTOM_BUILD_TYPE Debug)\n")
     f.write(
         '   set(CMAKE_C_FLAGS "-g -march=native -Werror -Wall -Wextra -fsanitize=address,undefined")\n'
     )
     f.write("else()\n")
-    f.write("   set(QCOS_CUSTOM_BUILD_TYPE Release)\n")
+    f.write("   set(QOCO_CUSTOM_BUILD_TYPE Release)\n")
     f.write('   set(CMAKE_C_FLAGS "-O3 -march=native -Wall -Wextra")\n')
     f.write("endif()\n")
-    f.write('message(STATUS "Build Type: " ${QCOS_CUSTOM_BUILD_TYPE})\n')
+    f.write('message(STATUS "Build Type: " ${QOCO_CUSTOM_BUILD_TYPE})\n')
     f.write('message(STATUS "Build Flags: " ${CMAKE_C_FLAGS})\n')
 
     f.write('set(CMAKE_C_FLAGS "-O3 -march=native -Wall -Wextra")\n')
-    f.write("# Build qcos_custom shared library.\n")
-    f.write("add_library(qcos_custom SHARED)\n")
+    f.write("# Build qoco_custom shared library.\n")
+    f.write("add_library(qoco_custom SHARED)\n")
     f.write(
-        "target_sources(qcos_custom PRIVATE qcos_custom.c cone.c utils.c ldl.c kkt.c)\n\n"
+        "target_sources(qoco_custom PRIVATE qoco_custom.c cone.c utils.c ldl.c kkt.c)\n\n"
     )
-    f.write("target_link_libraries(qcos_custom m)\n")
-    f.write("# Build qcos demo.\n")
+    f.write("target_link_libraries(qoco_custom m)\n")
+    f.write("# Build qoco demo.\n")
     f.write("add_executable(runtest runtest.c)\n")
-    f.write("target_link_libraries(runtest qcos_custom)\n")
+    f.write("target_link_libraries(runtest qoco_custom)\n")
     f.close()
 
 
@@ -423,7 +423,7 @@ def generate_cone(solver_dir, m, Wnnz, Wsparse2dense):
     f.write("   for (int i = 1; i < n; ++i) {\n")
     f.write("      res += u[i] * u[i];\n")
     f.write("   }\n")
-    f.write("   res = qcos_sqrt(res) - u[0];\n")
+    f.write("   res = qoco_sqrt(res) - u[0];\n")
     f.write("   return res;\n")
     f.write("}\n\n")
     f.write("double soc_residual2(double* u, int n) {\n")
@@ -438,10 +438,10 @@ def generate_cone(solver_dir, m, Wnnz, Wsparse2dense):
     f.write("   double res = -1e7;\n")
     f.write("   int idx;\n")
     f.write("   for (idx = 0; idx < l; ++idx) {\n")
-    f.write("      res = qcos_max(-u[idx], res);\n")
+    f.write("      res = qoco_max(-u[idx], res);\n")
     f.write("   }\n")
     f.write("   for (int i = 0; i < nsoc; ++i) {\n")
-    f.write("      res = qcos_max(soc_residual(&u[idx], q[i]), res);\n")
+    f.write("      res = qoco_max(soc_residual(&u[idx], q[i]), res);\n")
     f.write("      idx += q[i];\n")
     f.write("   }\n")
     f.write("   return res;\n")
@@ -452,9 +452,9 @@ def generate_cone(solver_dir, m, Wnnz, Wsparse2dense):
     f.write("      double a = 0.0;\n\n")
     f.write("      int idx;\n")
     f.write("      for (idx = 0; idx < l; ++idx) {\n")
-    f.write("         a = qcos_max(a, -u[idx]);\n")
+    f.write("         a = qoco_max(a, -u[idx]);\n")
     f.write("      }\n")
-    f.write("      a = qcos_max(a, 0.0);\n\n")
+    f.write("      a = qoco_max(a, 0.0);\n\n")
     f.write("      for (int i = 0; i < nsoc; ++i) {\n")
     f.write("         double soc_res = soc_residual(&u[idx], q[i]);\n")
     f.write("         if (soc_res > 0 && soc_res > a) {\n")
@@ -511,7 +511,7 @@ def generate_cone(solver_dir, m, Wnnz, Wsparse2dense):
         f.write("   work->Winv[%i] = 0.0;\n" % i)
     f.write("   int idx;\n")
     f.write("   for (idx = 0; idx < work->l; ++idx) {\n")
-    f.write("       work->W[idx] = qcos_sqrt(safe_div(work->s[idx], work->z[idx]));\n")
+    f.write("       work->W[idx] = qoco_sqrt(safe_div(work->s[idx], work->z[idx]));\n")
     f.write("       work->Winv[idx] = safe_div(1.0, work->W[idx]);\n")
     f.write("   }\n\n")
 
@@ -519,17 +519,17 @@ def generate_cone(solver_dir, m, Wnnz, Wsparse2dense):
     f.write("   for (int i = 0; i < work->nsoc; ++i) {\n")
     f.write("       // Compute normalized vectors.\n")
     f.write("       double s_scal = soc_residual2(&work->s[idx], work->q[i]);\n")
-    f.write("       s_scal = qcos_sqrt(s_scal);\n")
+    f.write("       s_scal = qoco_sqrt(s_scal);\n")
     f.write("       double f = safe_div(1.0, s_scal);\n")
     f.write("       scale_arrayf(&work->s[idx], work->sbar, f, work->q[i]);\n\n")
 
     f.write("       double z_scal = soc_residual2(&work->z[idx], work->q[i]);\n")
-    f.write("       z_scal = qcos_sqrt(z_scal);\n")
+    f.write("       z_scal = qoco_sqrt(z_scal);\n")
     f.write("       f = safe_div(1.0, z_scal);\n")
     f.write("       scale_arrayf(&work->z[idx], work->zbar, f, work->q[i]);\n\n")
 
     f.write(
-        "       double gamma = qcos_sqrt(0.5 * (1 + dot(work->sbar, work->zbar, work->q[i])));\n"
+        "       double gamma = qoco_sqrt(0.5 * (1 + dot(work->sbar, work->zbar, work->q[i])));\n"
     )
     f.write("       f = safe_div(1.0, (2 * gamma));\n\n")
     f.write("       // Overwrite sbar with wbar.\n")
@@ -538,14 +538,14 @@ def generate_cone(solver_dir, m, Wnnz, Wsparse2dense):
     f.write("           work->sbar[j] = f * (work->sbar[j] - work->zbar[j]);\n")
     f.write("       }\n\n")
     f.write("       // Overwrite zbar with v.\n")
-    f.write("       f = safe_div(1.0, qcos_sqrt(2 * (work->sbar[0] + 1)));\n")
+    f.write("       f = safe_div(1.0, qoco_sqrt(2 * (work->sbar[0] + 1)));\n")
     f.write("       work->zbar[0] = f * (work->sbar[0] + 1.0);\n")
     f.write("       for (int j = 1; j < work->q[i]; ++j) {\n")
     f.write("           work->zbar[j] = f * work->sbar[j];\n")
     f.write("       }\n\n")
     f.write("       // Compute W for second-order cones.\n")
     f.write("       int shift = 0;\n")
-    f.write("       f = qcos_sqrt(safe_div(s_scal, z_scal));\n")
+    f.write("       f = qoco_sqrt(safe_div(s_scal, z_scal));\n")
     f.write("       double finv = safe_div(1.0, f);\n")
     f.write("       for (int j = 0; j < work->q[i]; ++j) {\n")
     f.write("           for (int k = 0; k <= j; ++k) {\n")
@@ -647,7 +647,7 @@ def generate_cone(solver_dir, m, Wnnz, Wsparse2dense):
 
     f.write("void compute_centering(Workspace* work) {\n")
     f.write(
-        "   double a = qcos_min(linesearch(work->z, &work->xyz[work->n + work->p], 1.0, work), linesearch(work->s, work->Ds, 1.0, work));\n"
+        "   double a = qoco_min(linesearch(work->z, &work->xyz[work->n + work->p], 1.0, work), linesearch(work->s, work->Ds, 1.0, work));\n"
     )
     f.write(
         "   axpy(&work->xyz[work->n + work->p], work->z, work->ubuff1, a, work->m);\n"
@@ -656,8 +656,8 @@ def generate_cone(solver_dir, m, Wnnz, Wsparse2dense):
     f.write(
         "   double rho = safe_div(dot(work->ubuff1, work->ubuff2, work->m), dot(work->z, work->s, work->m));\n"
     )
-    f.write("   double sigma = qcos_min(1.0, rho);\n")
-    f.write("   sigma = qcos_max(0.0, sigma);\n")
+    f.write("   double sigma = qoco_min(1.0, rho);\n")
+    f.write("   sigma = qoco_max(0.0, sigma);\n")
     f.write("   sigma = sigma * sigma * sigma;\n")
     f.write("   work->sigma = sigma;\n")
     f.write("}\n")
@@ -711,7 +711,7 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
     f.write("       KKTrow_inf_norm(work->xyzbuff, work);\n")
     f.write("       for (int i = 0; i < work->n + work->m + work->p; ++i) {\n")
     f.write(
-        "           work->xyzbuff[i] = safe_div(1.0, qcos_sqrt(work->xyzbuff[i]));\n"
+        "           work->xyzbuff[i] = safe_div(1.0, qoco_sqrt(work->xyzbuff[i]));\n"
     )
     f.write("       }\n\n")
 
@@ -723,7 +723,7 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
     f.write("       }\n")
     f.write("       g /= work->n;\n")
     f.write("       double cinf = inf_norm(work->c, work->n);\n")
-    f.write("       g = qcos_max(g, cinf);\n")
+    f.write("       g = qoco_max(g, cinf);\n")
     f.write("       g = safe_div(1.0, g);\n")
     f.write("       work->k *= g;\n\n")
     f.write("       // Make scalings for all variables in a second-order cone equal.\n")
@@ -970,7 +970,7 @@ def generate_kkt(solver_dir, n, m, p, P, c, A, b, G, h, perm, Wsparse2dense):
     f.write("   nt_multiply(work->Winv, work->Ds, work->ubuff3);\n")
     f.write("   nt_multiply(work->W, &work->xyz[work->n + work->p], work->ubuff2);\n")
     f.write(
-        "   double a = qcos_min(linesearch(work->lambda, work->ubuff3, 0.99, work), linesearch(work->lambda, work->ubuff2, 0.99, work));\n"
+        "   double a = qoco_min(linesearch(work->lambda, work->ubuff3, 0.99, work), linesearch(work->lambda, work->ubuff2, 0.99, work));\n"
     )
     f.write("   work->a = a;\n\n")
     f.write("   // Update iterate.\n")
@@ -999,22 +999,22 @@ def generate_utils(
     f.write("#ifndef UTILS_H\n")
     f.write("#define UTILS_H\n\n")
     f.write('#include "workspace.h"\n\n')
-    f.write("#define qcos_abs(x) ((x)<0 ? -(x) : (x))\n")
-    f.write("#define safe_div(a, b) (qcos_abs(a) > 1e-15) ? (a / b) : 1e16\n")
+    f.write("#define qoco_abs(x) ((x)<0 ? -(x) : (x))\n")
+    f.write("#define safe_div(a, b) (qoco_abs(a) > 1e-15) ? (a / b) : 1e16\n")
     f.write("#include <math.h>\n")
-    f.write("#define qcos_sqrt(a) sqrt(a)\n")
-    f.write("#define qcos_min(a, b) (((a) < (b)) ? (a) : (b))\n")
-    f.write("#define qcos_max(a, b) (((a) > (b)) ? (a) : (b))\n\n")
+    f.write("#define qoco_sqrt(a) sqrt(a)\n")
+    f.write("#define qoco_min(a, b) (((a) < (b)) ? (a) : (b))\n")
+    f.write("#define qoco_max(a, b) (((a) > (b)) ? (a) : (b))\n\n")
 
-    f.write("enum qcos_custom_solve_status {\n")
-    f.write("   QCOS_CUSTOM_UNSOLVED = 0,\n")
-    f.write("   QCOS_CUSTOM_SOLVED,\n")
-    f.write("   QCOS_CUSTOM_SOLVED_INACCURATE,\n")
-    f.write("   QCOS_CUSTOM_NUMERICAL_ERROR,\n")
-    f.write("   QCOS_CUSTOM_MAX_ITER,\n")
+    f.write("enum qoco_custom_solve_status {\n")
+    f.write("   QOCO_CUSTOM_UNSOLVED = 0,\n")
+    f.write("   QOCO_CUSTOM_SOLVED,\n")
+    f.write("   QOCO_CUSTOM_SOLVED_INACCURATE,\n")
+    f.write("   QOCO_CUSTOM_NUMERICAL_ERROR,\n")
+    f.write("   QOCO_CUSTOM_MAX_ITER,\n")
     f.write("};\n\n")
 
-    f.write("static const char *QCOS_CUSTOM_SOLVE_STATUS_MESSAGE[] = {\n")
+    f.write("static const char *QOCO_CUSTOM_SOLVE_STATUS_MESSAGE[] = {\n")
     f.write('   "unsolved",\n')
     f.write('   "solved",\n')
     f.write('   "solved inaccurately",\n')
@@ -1109,7 +1109,7 @@ def generate_utils(
     f.write("   work->sol.dres = 0;\n")
     f.write("   work->sol.gap = 0;\n")
     f.write("   work->sol.obj = 0;\n")
-    f.write("   work->sol.status = QCOS_CUSTOM_UNSOLVED;\n")
+    f.write("   work->sol.status = QOCO_CUSTOM_UNSOLVED;\n")
     f.write("}\n\n")
 
     f.write("void set_default_settings(Workspace* work) {\n")
@@ -1150,8 +1150,8 @@ def generate_utils(
     f.write("   double norm = 0.0;\n")
     f.write("   double xi;\n")
     f.write("   for (int i = 0; i < n; ++i) {\n")
-    f.write("       xi = qcos_abs(x[i]);\n")
-    f.write("       norm = qcos_max(norm , xi);\n")
+    f.write("       xi = qoco_abs(x[i]);\n")
+    f.write("       norm = qoco_max(norm , xi);\n")
     f.write("   }\n")
     f.write("   return norm;\n")
     f.write("}\n\n")
@@ -1178,7 +1178,7 @@ def generate_utils(
                 False,
                 False,
             ):
-                f.write("   norm[%i] = qcos_max(norm[%i], qcos_abs(" % (i, i))
+                f.write("   norm[%i] = qoco_max(norm[%i], qoco_abs(" % (i, i))
                 write_Kelem(
                     f,
                     i,
@@ -1256,7 +1256,7 @@ def generate_utils(
                 False,
                 False,
             ):
-                f.write("   norm[%i] = qcos_max(norm[%i], qcos_abs(" % (i, i))
+                f.write("   norm[%i] = qoco_max(norm[%i], qoco_abs(" % (i, i))
                 write_Kelem(
                     f,
                     i,
@@ -1432,7 +1432,7 @@ def generate_utils(
         "   ew_product(&work->kkt_res[work->n + work->p], work->Finvruiz, work->ubuff1, work->m);\n"
     )
     f.write("   double conic_res = inf_norm(work->ubuff1, work->m);\n")
-    f.write("   double pres = qcos_max(eq_res, conic_res);\n")
+    f.write("   double pres = qoco_max(eq_res, conic_res);\n")
     f.write("   ew_product(work->kkt_res, work->Dinvruiz, work->xbuff, work->n);\n")
     f.write("   scale_arrayf(work->xbuff, work->xbuff, work->kinv, work->n);\n")
     f.write("   double dres = inf_norm(work->xbuff, work->n);\n")
@@ -1477,18 +1477,18 @@ def generate_utils(
     f.write("   double Axinf = inf_norm(work->xbuff, work->p);\n\n")
 
     f.write("   // Compute max{Axinf, binf, Gxinf, hinf, sinf}.\n")
-    f.write("   double pres_rel = qcos_max(Axinf, binf);\n")
-    f.write("   pres_rel = qcos_max(pres_rel, Gxinf);\n")
-    f.write("   pres_rel = qcos_max(pres_rel, hinf);\n")
-    f.write("   pres_rel = qcos_max(pres_rel, sinf);\n\n")
+    f.write("   double pres_rel = qoco_max(Axinf, binf);\n")
+    f.write("   pres_rel = qoco_max(pres_rel, Gxinf);\n")
+    f.write("   pres_rel = qoco_max(pres_rel, hinf);\n")
+    f.write("   pres_rel = qoco_max(pres_rel, sinf);\n\n")
     f.write("   // Compute max{Pxinf, Atyinf, Gtzinf, cinf}.\n")
-    f.write("   double dres_rel = qcos_max(Pxinf, Atyinf);\n")
-    f.write("   dres_rel = qcos_max(dres_rel, Gtzinf);\n")
-    f.write("   dres_rel = qcos_max(dres_rel, cinf);\n")
+    f.write("   double dres_rel = qoco_max(Pxinf, Atyinf);\n")
+    f.write("   dres_rel = qoco_max(dres_rel, Gtzinf);\n")
+    f.write("   dres_rel = qoco_max(dres_rel, cinf);\n")
     f.write("   dres_rel *= work->kinv;\n")
 
     f.write("   // Compute max{sinf, zinf}.\n")
-    f.write("   double gap_rel = qcos_max(sinf, zinf);\n\n")
+    f.write("   double gap_rel = qoco_max(sinf, zinf);\n\n")
 
     f.write(
         "   // If the solver stalled (a = 0) check if low tolerance stopping criteria is met.\n "
@@ -1497,11 +1497,11 @@ def generate_utils(
     f.write(
         "      if (pres < work->settings.abstol_inacc + work->settings.reltol_inacc * pres_rel && dres < work->settings.abstol_inacc + work->settings.reltol_inacc * dres_rel && work->sol.gap < work->settings.abstol_inacc + work->settings.reltol_inacc * gap_rel) {\n"
     )
-    f.write("           work->sol.status = QCOS_CUSTOM_SOLVED_INACCURATE;\n")
+    f.write("           work->sol.status = QOCO_CUSTOM_SOLVED_INACCURATE;\n")
     f.write("           return 1;\n")
     f.write("      }\n")
     f.write("      else {\n")
-    f.write("           work->sol.status = QCOS_CUSTOM_NUMERICAL_ERROR;\n")
+    f.write("           work->sol.status = QOCO_CUSTOM_NUMERICAL_ERROR;\n")
     f.write("           return 1;\n")
     f.write("      }\n")
     f.write("   }\n")
@@ -1509,7 +1509,7 @@ def generate_utils(
     f.write(
         "   if (pres < work->settings.abstol + work->settings.reltol * pres_rel && dres < work->settings.abstol + work->settings.reltol * dres_rel && work->sol.gap < work->settings.abstol + work->settings.reltol * gap_rel) {\n"
     )
-    f.write("      work->sol.status = QCOS_CUSTOM_SOLVED;\n")
+    f.write("      work->sol.status = QOCO_CUSTOM_SOLVED;\n")
     f.write("      return 1;\n")
     f.write("   }\n")
     f.write("   return 0;\n")
@@ -1542,7 +1542,7 @@ def generate_utils(
         '   printf("+-------------------------------------------------------+\\n");\n'
     )
     f.write(
-        '   printf("|              QCOS Custom Generated Solver             |\\n");\n'
+        '   printf("|              QOCO Custom Generated Solver             |\\n");\n'
     )
     f.write(
         '   printf("|             (c) Govind M. Chari, 2024                 |\\n");\n'
@@ -1618,7 +1618,7 @@ def generate_utils(
     f.write("void print_footer(Workspace* work) {\n")
     f.write("#ifdef ENABLE_PRINTING\n")
     f.write(
-        '       printf("\\nstatus: %s ", QCOS_CUSTOM_SOLVE_STATUS_MESSAGE[work->sol.status]);\n'
+        '       printf("\\nstatus: %s ", QOCO_CUSTOM_SOLVE_STATUS_MESSAGE[work->sol.status]);\n'
     )
     f.write('       printf("\\nnumber of iterations: %d ", work->sol.iters);\n')
     f.write('       printf("\\nobjective: %f ", work->sol.obj);\n')
@@ -1639,22 +1639,22 @@ def generate_utils(
 
 
 def generate_solver(solver_dir, m, Wsparse2dense):
-    f = open(solver_dir + "/qcos_custom.h", "a")
+    f = open(solver_dir + "/qoco_custom.h", "a")
     write_license(f)
-    f.write("#ifndef QCOS_CUSTOM_H\n")
-    f.write("#define QCOS_CUSTOM_H\n\n")
+    f.write("#ifndef QOCO_CUSTOM_H\n")
+    f.write("#define QOCO_CUSTOM_H\n\n")
     f.write('#include "cone.h"\n')
     f.write('#include "kkt.h"\n')
     f.write('#include "ldl.h"\n')
     f.write('#include "utils.h"\n')
     f.write('#include "workspace.h"\n\n')
-    f.write("void qcos_custom_solve(Workspace* work);\n")
+    f.write("void qoco_custom_solve(Workspace* work);\n")
     f.write("#endif")
     f.close()
 
-    f = open(solver_dir + "/qcos_custom.c", "a")
+    f = open(solver_dir + "/qoco_custom.c", "a")
     write_license(f)
-    f.write('#include "qcos_custom.h"\n\n')
+    f.write('#include "qoco_custom.h"\n\n')
     f.write("void initialize_ipm(Workspace* work) {\n")
     f.write(
         "   // Need to be set to 1.0 not 0.0 due to low tolerance stopping criteria checks\n"
@@ -1693,7 +1693,7 @@ def generate_solver(solver_dir, m, Wsparse2dense):
     f.write("   bring2cone(work->z, work->l, work->nsoc, work->q);\n")
     f.write("}\n\n")
 
-    f.write("void qcos_custom_solve(Workspace* work) {\n")
+    f.write("void qoco_custom_solve(Workspace* work) {\n")
     f.write("   if (work->settings.verbose) {\n")
     f.write("       print_header(work);\n")
     f.write("   }\n")
@@ -1721,7 +1721,7 @@ def generate_solver(solver_dir, m, Wsparse2dense):
     f.write("      }\n")
     f.write("   }\n")
     f.write("   unequilibrate_data(work);\n")
-    f.write("   work->sol.status = QCOS_CUSTOM_MAX_ITER;\n")
+    f.write("   work->sol.status = QOCO_CUSTOM_MAX_ITER;\n")
     f.write("   if (work->settings.verbose) {\n")
     f.write("       print_footer(work);\n")
     f.write("   }\n")
@@ -1734,7 +1734,7 @@ def generate_runtest(solver_dir):
     write_license(f)
     f.write("#include <stdio.h>\n")
     f.write("#include <time.h>\n")
-    f.write('#include "qcos_custom.h"\n\n')
+    f.write('#include "qoco_custom.h"\n\n')
     f.write("int main() {\n")
     f.write("   Workspace work;\n")
     f.write("   set_default_settings(&work);\n")
@@ -1745,7 +1745,7 @@ def generate_runtest(solver_dir):
     f.write("       struct timespec start, end;\n")
     f.write("       clock_gettime(CLOCK_MONOTONIC, &start);\n")
     f.write("       load_data(&work);\n")
-    f.write("       qcos_custom_solve(&work);\n")
+    f.write("       qoco_custom_solve(&work);\n")
     f.write("       clock_gettime(CLOCK_MONOTONIC, &end);\n")
     f.write(
         "       double elapsed_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;\n"

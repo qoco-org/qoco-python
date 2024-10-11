@@ -1,4 +1,4 @@
-import qcospy as qcos
+import qoco
 from scipy import sparse
 import numpy as np
 
@@ -20,8 +20,8 @@ p = 2
 nsoc = 1
 q = np.array([3])
 
-# Create an QCOS object.
-prob = qcos.QCOS()
+# Create an QOCO object.
+prob = qoco.QOCO()
 
 # Setup workspace.
 prob.setup(n, m, p, P, c, A, b, G, h, l, nsoc, q)
@@ -34,5 +34,5 @@ prob.update_settings(verbose=1)
 res = prob.solve()
 
 opt_obj = 4.042
-assert res.status == "QCOS_SOLVED"
+assert res.status == "QOCO_SOLVED"
 assert abs(res.obj - opt_obj) <= 1e-4
