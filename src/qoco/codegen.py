@@ -1750,7 +1750,7 @@ def generate_runtest(solver_dir):
     f.write(
         "       double elapsed_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;\n"
     )
-    f.write("   solve_time_sec = qoco_min(solve_time_sec, elapsed_time);\n")
+    f.write("       solve_time_sec = qoco_min(solve_time_sec, elapsed_time);\n")
     f.write("   }\n")
     f.write('   printf("\\nSolvetime: %.9f ms", 1e3 * solve_time_sec);\n')
     f.write('   FILE *file = fopen("result.bin", "wb");\n')
