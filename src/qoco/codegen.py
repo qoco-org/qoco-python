@@ -1740,7 +1740,7 @@ def generate_runtest(solver_dir):
     f.write("   set_default_settings(&work);\n")
     f.write("   work.settings.verbose = 0;\n")
     f.write("   double N = 1000;\n")
-    f.write("   double total_time = 0;\n")
+    f.write("   double solve_time_sec = 1e10;\n")
     f.write("   for (int i = 0; i < N; ++i) {\n")
     f.write("       struct timespec start, end;\n")
     f.write("       clock_gettime(CLOCK_MONOTONIC, &start);\n")
@@ -1750,15 +1750,13 @@ def generate_runtest(solver_dir):
     f.write(
         "       double elapsed_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;\n"
     )
-    f.write("       total_time += elapsed_time;\n")
+    f.write("   solve_time_sec = qoco_min(solve_time_sec, elapsed_time);\n")
     f.write("   }\n")
-    f.write("   double average_solvetime_ms = 1e3 * total_time / N;\n")
-    f.write('   printf("\\nTotal Time: %.9f ms", 1e3 * total_time);\n')
-    f.write('   printf("\\nAverage Solvetime: %.9f ms", 1e3 * total_time / N);\n')
+    f.write('   printf("\\nSolvetime: %.9f ms", 1e3 * solve_time_sec);\n')
     f.write('   FILE *file = fopen("result.bin", "wb");\n')
     f.write("   fwrite(&work.sol.status, sizeof(unsigned char), 1, file);\n")
     f.write("   fwrite(&work.sol.obj, sizeof(double), 1, file);\n")
-    f.write("   fwrite(&average_solvetime_ms, sizeof(double), 1, file);\n")
+    f.write("   fwrite(&solve_time_sec, sizeof(double), 1, file);\n")
     f.write("   fclose(file);\n")
     f.write('   printf("\\nobj: %f", work.sol.obj);\n')
 
