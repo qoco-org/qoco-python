@@ -143,7 +143,7 @@ class QOCO:
         )
         return results
 
-    def generate_solver(self, output_dir=".", name="qoco_custom"):
+    def generate_solver(self, output_dir=".", name="qoco_custom", generate_ruiz=False):
         start_time = time.time()
         _generate_solver(
             self.n,
@@ -160,6 +160,7 @@ class QOCO:
             self.q,
             output_dir,
             name,
+            generate_ruiz,
         )
         end_time = time.time()
         elapsed_time = end_time - start_time

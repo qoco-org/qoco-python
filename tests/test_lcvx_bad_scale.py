@@ -93,7 +93,9 @@ def test_lcvx_bad_scaling():
 
     prob_qoco.setup(n, m, p, P, c, A, b, G, h, l, nsoc, q)
 
-    prob_qoco.generate_solver("tests/", "qoco_custom_lcvx_bad_scaling")
+    prob_qoco.generate_solver(
+        "tests/", "qoco_custom_lcvx_bad_scaling", generate_ruiz=True
+    )
     codegen_solved, codegen_obj, average_runtime_ms = run_generated_solver(
         "tests/qoco_custom_lcvx_bad_scaling"
     )
