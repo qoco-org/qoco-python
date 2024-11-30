@@ -91,7 +91,7 @@ def test_lcvx_bad_scaling():
 
     prob_qoco = qoco.QOCO()
 
-    prob_qoco.setup(n, m, p, P, c, A, b, G, h, l, nsoc, q)
+    prob_qoco.setup(n, m, p, P, c, A, b, G, h, l, nsoc, q, ruiz_iters=5)
 
     prob_qoco.generate_solver(
         "tests/", "qoco_custom_lcvx_bad_scaling", generate_ruiz=True
