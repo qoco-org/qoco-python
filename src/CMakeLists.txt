@@ -5,6 +5,16 @@ set(CMAKE_CXX_STANDARD 11)
 
 set(QOCO_BUILD_TYPE "Release")
 
+# Detect operating system.
+message(STATUS "We are on a ${CMAKE_SYSTEM_NAME} system")
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+    add_compile_definitions(IS_LINUX)
+elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+    add_compile_definitions(IS_MACOS)
+elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+    add_compile_definitions(IS_WINDOWS)
+endif()
+
 find_package(pybind11 REQUIRED)
 
 message(STATUS "Fetching/configuring QOCO")
@@ -13,7 +23,7 @@ include(FetchContent)
 FetchContent_Declare(
   qoco
   GIT_REPOSITORY https://github.com/govindchari/qoco.git
-  GIT_TAG 3b06e769c0fd5d0238b0ff68aafe316f54d39654
+  GIT_TAG 68f6a7695a911d5adcb35e05ef142376e9f6168c
 )
 list(POP_BACK CMAKE_MESSAGE_INDENT)
 FetchContent_MakeAvailable(qoco)
