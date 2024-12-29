@@ -1,5 +1,5 @@
 /* Copyright (c) 2024, Govind M. Chari <govindchari1@gmail.com> */
-/* This source code is licensed under the BSD 2-Clause License  */
+/* This source code is licensed under the BSD 3-Clause License  */
 
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
