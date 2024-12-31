@@ -50,6 +50,8 @@ jobs:
           pip install "pybind11[global]"
 
       - name: Install qoco
+        env:
+          GH_PAT: ${{ GH_PAT }}
         run: >
           pip install .
 
