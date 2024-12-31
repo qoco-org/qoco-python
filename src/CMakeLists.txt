@@ -11,8 +11,6 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     add_compile_definitions(IS_LINUX)
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
     add_compile_definitions(IS_MACOS)
-elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
-    add_compile_definitions(IS_WINDOWS)
 endif()
 
 find_package(pybind11 REQUIRED)
