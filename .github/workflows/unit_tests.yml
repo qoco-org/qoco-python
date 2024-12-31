@@ -47,7 +47,7 @@ jobs:
 
       - name: Install pybind
         run: >
-          pip install pybind11
+          pip install "pybind11[global]"
 
       - name: Install qoco
         run: >
