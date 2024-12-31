@@ -1,3 +1,1 @@
-from qoco.interface import (
-    QOCO,
-)
+from qoco.interface import QOCO
