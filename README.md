@@ -1,4 +1,6 @@
-# Quadratic Objective Conic Optimizer (QOCO)
+# QOCO Python
+
+This repository houses the python wrapper for QOCO and the code generator QOCOGEN.
 
 QOCO implements a primal-dual interior point method to solve second-order cone programs with quadratic objectives of the following form
 
