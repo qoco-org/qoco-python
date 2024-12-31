@@ -1,7 +1,7 @@
 # QOCO Python
 ![Unit Tests](https://github.com/qoco-org/qoco-python/actions/workflows/unit_tests.yml/badge.svg)
 
-This repository houses the python wrapper for QOCO and the code generator QOCOGEN.
+This repository contains the python wrapper for QOCO and the code generator QOCOGEN.
 
 QOCO implements a primal-dual interior point method to solve second-order cone programs with quadratic objectives of the following form
 
