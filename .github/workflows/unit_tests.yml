@@ -51,7 +51,7 @@ jobs:
 
       - name: Install qoco
         env:
-          GH_PAT: ${{ GH_PAT }}
+          GH_PAT: ${{ secrets.GH_PAT }}
         run: >
           pip install .
 
