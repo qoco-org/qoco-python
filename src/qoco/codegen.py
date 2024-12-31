@@ -135,7 +135,7 @@ def generate_cmakelists(solver_dir):
     f.write('message(STATUS "Build Type: " ${QOCO_CUSTOM_BUILD_TYPE})\n')
     f.write('message(STATUS "Build Flags: " ${CMAKE_C_FLAGS})\n')
 
-    f.write('set(CMAKE_C_FLAGS "-O3 -march=native -Wall -Wextra")\n')
+    f.write('set(CMAKE_C_FLAGS "-O3 -march=native -Wall -Wextra")\n\n')
     f.write("# Build qoco_custom shared library.\n")
     f.write("add_library(qoco_custom SHARED)\n")
     f.write(
@@ -1158,17 +1158,20 @@ def generate_utils(
     f.write("}\n\n")
 
     f.write("void set_default_settings(Workspace* work) {\n")
-    f.write("   work->settings.max_iters = 50;\n")
+    f.write("   work->settings.max_iters = 200;\n")
     f.write("   work->settings.bisect_iters = 5;\n")
-    f.write("   work->settings.ruiz_iters = 5;\n")
+    if generate_ruiz:
+        f.write("   work->settings.ruiz_iters = 1;\n")
+    else:
+        f.write("   work->settings.ruiz_iters = 0;\n")
     f.write("   work->settings.iter_ref_iters = 1;\n")
-    f.write("   work->settings.kkt_static_reg = 1e-7;\n")
-    f.write("   work->settings.kkt_dynamic_reg = 1e-7;\n")
+    f.write("   work->settings.kkt_static_reg = 1e-8;\n")
+    f.write("   work->settings.kkt_dynamic_reg = 1e-8;\n")
     f.write("   work->settings.abstol = 1e-7;\n")
     f.write("   work->settings.reltol = 1e-7;\n")
     f.write("   work->settings.abstol_inacc = 1e-5;\n")
     f.write("   work->settings.reltol_inacc = 1e-5;\n")
-    f.write("   work->settings.verbose = 1;\n")
+    f.write("   work->settings.verbose = 0;\n")
     f.write("}\n\n")
 
     f.write("void copy_arrayf(double* x, double* y, int n) {\n")
