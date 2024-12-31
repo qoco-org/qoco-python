@@ -53,6 +53,7 @@ jobs:
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
         run: >
+          sed -i 's|git@github.com:|https://$ENV\{GH_PAT\}@github.com/|g' CMakeLists.txt
           pip install .
 
       - name: Run Pytest
