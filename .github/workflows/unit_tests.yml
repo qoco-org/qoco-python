@@ -34,6 +34,9 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.GH_PAT }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -50,10 +53,7 @@ jobs:
           pip install "pybind11[global]"
 
       - name: Install qoco
-        env:
-          GH_PAT: ${{ secrets.GH_PAT }}
         run: >
-          sed -i 's|git@github.com:|https://$ENV\{GH_PAT\}@github.com/|g' CMakeLists.txt
           pip install .
 
       - name: Run Pytest
