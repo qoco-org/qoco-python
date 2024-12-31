@@ -45,6 +45,10 @@ jobs:
         run: |
           echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
 
+      - name: Install pybind
+        run: >
+          pip install pybind11
+
       - name: Install qoco
         run: >
           pip install .
