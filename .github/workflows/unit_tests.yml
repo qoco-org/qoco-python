@@ -50,7 +50,7 @@ jobs:
 
       - name: Install dependencies
         run: >
-          pip install "pybind11[global]" pytest cvxpy
+          pip install "pybind11[global]" pytest pytest-xdist cvxpy
 
       - name: Install qoco
         run: >
@@ -58,4 +58,4 @@ jobs:
 
       - name: Run Pytest
         run: >
-          pytest
+          pytest -n 12
