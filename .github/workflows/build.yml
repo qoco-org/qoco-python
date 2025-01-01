@@ -36,58 +36,34 @@ jobs:
           if-no-files-found: error
 
   build_wheels:
-    name: Build wheel on ${{ matrix.os }} for ${{ matrix.cibw_archs }}
+    name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-latest
-            cibw_archs: "x86_64"
-          - os: ubuntu-latest
-            cibw_archs: "aarch64"
-          - os: windows-2022
-            cibw_archs: "auto64"
-          # Include macos-13 to get Intel x86_64 macs and maos-latest to get the Aaarch64 macs
-          - os: macos-13
-            cibw_archs: "x86_64"
-          - os: macos-latest
-            cibw_archs: "arm64"
+        os: [ubuntu-latest, windows-latest, macos-13, macos-14]
 
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v4
       - uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      # This might not be necessary once ARM runners become available for general use
-      - name: Set up QEMU
-        if: matrix.cibw_archs == 'aarch64'
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
+      # Used to host cibuildwheel
+      - uses: actions/setup-python@v5
+
+      - name: Install cibuildwheel
+        run: python -m pip install cibuildwheel==2.20.0
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.20
-        with:
-          output-dir: wheelhouse
-        env:
-          CIBW_BUILD: "cp3*"
-          # Temporarily skip 3.13 because it is still an RC and our dependencies aren't there yet
-          CIBW_SKIP: "cp36-* cp37-* *-win32 *-manylinux_i686 *-musllinux_* cp313-*"
-          # # Clean the build directory between builds
-          # CIBW_BEFORE_BUILD: >-
-          #   rm -rf {package}/osqp_sources/build
-          # CIBW_TEST_COMMAND: "python -m pytest -s {project}/src/osqp/tests"
-          CIBW_ENVIRONMENT_MACOS: CMAKE_OSX_ARCHITECTURES=${{ matrix.cibw_archs }}
-          CIBW_BUILD_VERBOSITY: 1
+        run: python -m cibuildwheel --output-dir wheelhouse
+        # to supply options, put them in 'env', like:
+        # env:
+        #   CIBW_SOME_OPTION: value
 
-      - name: Upload artifacts to github
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: wheels-${{ runner.os }}-${{ matrix.cibw_archs }}
+          name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
           path: ./wheelhouse/*.whl
-          if-no-files-found: error
 
   publish_to_pypi:
     name: Publish wheels to PyPi
