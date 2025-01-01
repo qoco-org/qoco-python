@@ -64,6 +64,7 @@ jobs:
       - uses: pypa/cibuildwheel@v2.21
         env:
           SSH_AUTH_SOCK: $SSH_AUTH_SOCK
+          CIBW_PLATFORM: linux
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
