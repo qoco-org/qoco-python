@@ -62,6 +62,8 @@ jobs:
           python -m build --outdir=wheelhouse
 
       - uses: pypa/cibuildwheel@v2.21
+        env:
+          SSH_AUTH_SOCK: $SSH_AUTH_SOCK
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
