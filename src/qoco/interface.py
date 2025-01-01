@@ -42,7 +42,7 @@ class QOCO:
             "QOCO_MAX_ITER",
         ]
 
-        self.ext = importlib.import_module("qoco_ext")
+        self.ext = importlib.import_module("qoco.qoco_ext")
         self._solver = None
 
     def update_settings(self, **kwargs):

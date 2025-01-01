@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.15)
 project(extension)
 
 set(CMAKE_CXX_STANDARD 11)
@@ -21,11 +21,13 @@ include(FetchContent)
 FetchContent_Declare(
   qoco
   GIT_REPOSITORY git@github.com:qoco-org/qoco.git
-  GIT_TAG 43e81c954a18a02548b398e15bf6b51bc9568bdf
+  GIT_TAG 8d31979219f9253ca6e2450d1a8b19d189041edd
 )
+
 list(POP_BACK CMAKE_MESSAGE_INDENT)
 FetchContent_MakeAvailable(qoco)
 
-add_library(qoco_ext MODULE bindings.cpp)
-target_link_libraries(qoco_ext PRIVATE pybind11::module qoco)
-set_target_properties(qoco_ext PROPERTIES PREFIX "${PYTHON_MODULE_PREFIX}" SUFFIX "${PYTHON_MODULE_EXTENSION}")
+pybind11_add_module(qoco_ext src/bindings.cpp)
+target_include_directories(qoco_ext INTERFACE ${qoco_SOURCE_DIR}/include)
+target_link_libraries(qoco_ext PUBLIC pybind11::module qocostatic)
+install(TARGETS qoco_ext DESTINATION . COMPONENT python)
