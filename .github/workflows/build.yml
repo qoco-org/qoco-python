@@ -23,25 +23,26 @@ jobs:
         with:
           submodules: "recursive"
 
-      - name: Build source
+      - name: Build source and wheel
         run: |
           python -m pip install build
-          python -m build --sdist --outdir=wheelhouse
+          python -m build --outdir=wheelhouse
 
-      - name: Upload sdist to github
+      - name: Upload sdist and wheel to github
         uses: actions/upload-artifact@v4
         with:
           name: wheels-sdist
-          path: wheelhouse/*.tar.gz
+          path: wheelhouse/*
           if-no-files-found: error
 
   build_wheels:
-    name: Wheel on ${{ matrix.os }}
+    name: Building wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-13, macos-14]
+        # os: [ubuntu-latest, windows-latest, macos-13, macos-14]
+        os: [ubuntu-latest]
 
     steps:
       - uses: actions/checkout@v4
