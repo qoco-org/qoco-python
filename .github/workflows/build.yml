@@ -3,14 +3,14 @@
 name: Build Default
 
 on:
+  # Triggers the workflow on push or pull request events
   push:
     branches:
-      - master
-    tags:
       - "*"
+      - "*/*"
+      - "**"
   pull_request:
-    branches:
-      - master
+    branches: [main]
 
 jobs:
   build_sdist:
