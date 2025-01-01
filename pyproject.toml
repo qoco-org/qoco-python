@@ -9,7 +9,7 @@ description = "QOCO: Quadratic Objective Conic Optimizer"
 readme = "README.md"
 requires-python = ">=3.8"
 authors = [{ name = "Govind M. Chari", email = "govindchari1@gmail.com" }]
-dependencies = ["numpy>=1.7", "qdldl", "scipy>=0.13.2", "setuptools"]
+dependencies = ["jinja2", "numpy>=1.7", "qdldl", "scipy>=0.13.2", "setuptools"]
 
 [tool.scikit-build]
 install.components = ["python"]
