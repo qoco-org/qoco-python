@@ -249,6 +249,7 @@ PYBIND11_MODULE(qoco_ext, m)
         .value("QOCO_SOLVED", QOCO_SOLVED)
         .value("QOCO_SOLVED_INACCURATE", QOCO_SOLVED_INACCURATE)
         .value("QOCO_MAX_ITER", QOCO_MAX_ITER)
+        .value("QOCO_NUMERICAL_ERROR", QOCO_NUMERICAL_ERROR)
         .export_values();
 
     // CSC.
