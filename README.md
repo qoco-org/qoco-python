@@ -22,7 +22,7 @@ $$\mathcal{C} =  \mathbb{R}^l_+ \times \mathcal{Q}^{q_1}_1 \times \ldots \times 
 
 where $l$ is the dimension of the non-negative orthant, and $\mathcal{Q}^{q_i}_i$ is the $i^{th}$ second-order cone with dimension $q_i$ defined by
 
-$$\mathcal{Q}^{q_i}_i = \\{(t,x)  \in \mathbb{R} \times \mathbb{R}^{q_i - 1} \\; | \\; ||x||_2 \leq t \\}$$
+$$\mathcal{Q}^{q_i}_i = \\{(t,x)  \in \mathbb{R} \times \mathbb{R}^{q_i - 1} \\; | \\; norm(x) \leq t \\}$$
 
 ## Bug reports
 
