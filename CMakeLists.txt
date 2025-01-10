@@ -21,7 +21,7 @@ include(FetchContent)
 FetchContent_Declare(
   qoco
   GIT_REPOSITORY https://github.com/qoco-org/qoco.git
-  GIT_TAG 89bdc377f236511d54933f3f2c4a482fe4d964d2
+  GIT_TAG 5abc44574b62e5a28cdae8e97ea70ecacf1f954c
 )
 
 list(POP_BACK CMAKE_MESSAGE_INDENT)
@@ -29,5 +29,5 @@ FetchContent_MakeAvailable(qoco)
 
 pybind11_add_module(qoco_ext src/bindings.cpp)
 target_include_directories(qoco_ext INTERFACE ${qoco_SOURCE_DIR}/include)
-target_link_libraries(qoco_ext PUBLIC pybind11::module qoco)
+target_link_libraries(qoco_ext PUBLIC pybind11::module qocostatic)
 install(TARGETS qoco_ext DESTINATION . COMPONENT python)
