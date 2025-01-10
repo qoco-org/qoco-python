@@ -29,5 +29,5 @@ FetchContent_MakeAvailable(qoco)
 
 pybind11_add_module(qoco_ext src/bindings.cpp)
 target_include_directories(qoco_ext INTERFACE ${qoco_SOURCE_DIR}/include)
-target_link_libraries(qoco_ext PUBLIC pybind11::module qocostatic)
+target_link_libraries(qoco_ext PUBLIC pybind11::module qoco)
 install(TARGETS qoco_ext DESTINATION . COMPONENT python)
