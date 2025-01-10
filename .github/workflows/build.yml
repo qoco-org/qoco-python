@@ -22,9 +22,6 @@ jobs:
       - uses: actions/checkout@master
         with:
           submodules: "recursive"
-      # - uses: webfactory/ssh-agent@v0.9.0
-      #   with:
-      #     ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Build source and wheel
         run: |
@@ -51,9 +48,6 @@ jobs:
         with:
           fetch-depth: 0
           submodules: true
-      # - uses: webfactory/ssh-agent@v0.9.0
-      #   with:
-      #     ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - uses: pypa/cibuildwheel@v2.21
 
@@ -65,7 +59,6 @@ jobs:
 
   publish_to_pypi:
     name: Publish wheels to PyPi
-    if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')
     needs: [build_sdist, build_wheels]
     runs-on: ubuntu-latest
     steps:
