@@ -1,5 +1,11 @@
 # QOCO Python
-![Unit Tests](https://github.com/qoco-org/qoco-python/actions/workflows/unit_tests.yml/badge.svg)
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/7bd44fa7-d198-4739-bb79-a5c15e04a8de" alt="drawing" width="500"/>
+</p>
+
+<p align="center">
+  <a href=https://github.com/qoco-org/qoco-python/actions/workflows/unit_tests.yml/badge.svg"><img src="https://github.com/qoco-org/qoco-python/actions/workflows/unit_tests.yml/badge.svg"/></a>
+</p>
 
 This repository contains the python wrapper for [QOCO](https://github.com/qoco-org/qoco) and the code generator QOCOGEN.
 
