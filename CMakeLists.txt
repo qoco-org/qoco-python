@@ -20,7 +20,7 @@ list(APPEND CMAKE_MESSAGE_INDENT "  ")
 include(FetchContent)
 FetchContent_Declare(
   qoco
-  GIT_REPOSITORY git@github.com:qoco-org/qoco.git
+  GIT_REPOSITORY https://github.com/qoco-org/qoco.git
   GIT_TAG 89bdc377f236511d54933f3f2c4a482fe4d964d2
 )
 
