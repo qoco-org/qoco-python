@@ -12,6 +12,14 @@ This repository contains the python wrapper for [QOCO](https://github.com/qoco-o
 
 QOCOGEN is a code generator which takes in an second-order cone program problem family and generates a customized C solver (called qoco_custom) for the specified problem family which implements the same algorithm as QOCO. This customized solver is library-free, only uses static memory allocation, and can be a few times faster than QOCO.
 
+## Installation and Usage
+
+You can install `qoco-python` by running `pip install qoco-python`.
+
+For instructions on using the wrapper for QOCO, refer to [API](https://qoco-org.github.io/qoco/api/matlab.html#matlab-interface), and [simple example](https://qoco-org.github.io/qoco/examples/simple_example.html#simple-example) for an example of solving a simple SOCP with the python wrapper.
+
+For instructions on using QOCOGEN, refer to the [documentation](https://qoco-org.github.io/qoco/codegen/index.html).
+
 ## Bug reports
 
 File any issues or bug reports using the [issue tracker](https://github.com/qoco-org/qoco-python/issues).
