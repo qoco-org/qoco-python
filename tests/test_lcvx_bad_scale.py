@@ -95,17 +95,8 @@ def test_lcvx_bad_scaling():
         n, m, p, P, c, A, b, G, h, l, nsoc, q, ruiz_iters=5, iter_ref_iters=3
     )
 
-    prob_qoco.generate_solver(
-        "tests/", "qoco_custom_lcvx_bad_scaling", generate_ruiz=True
-    )
-    codegen_solved, codegen_obj, average_runtime_ms = run_generated_solver(
-        "tests/qoco_custom_lcvx_bad_scaling"
-    )
-
     # Solve problem.
     res = prob_qoco.solve()
     opt_obj = prob.value
     assert res.status == "QOCO_SOLVED"
     assert (abs(res.obj - opt_obj) / abs(opt_obj)) <= 5e-4
-    assert codegen_solved == 1
-    assert (abs(codegen_obj - opt_obj) / abs(opt_obj)) <= 1e-3

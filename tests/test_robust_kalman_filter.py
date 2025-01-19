@@ -80,15 +80,8 @@ def test_robust_kalman_filter():
 
     prob_qoco.setup(n, m, p, P, c, A, b, G, h, l, nsoc, q)
 
-    prob_qoco.generate_solver("tests/", "qoco_custom_robust_kalman_filter")
-    codegen_solved, codegen_obj, average_runtime_ms = run_generated_solver(
-        "tests/qoco_custom_robust_kalman_filter"
-    )
-
     # Solve problem.
     res = prob_qoco.solve()
     opt_obj = probcp.value
     assert res.status == "QOCO_SOLVED"
     assert abs(res.obj - opt_obj) <= 1e-4
-    assert codegen_solved == 1
-    assert abs(codegen_obj - opt_obj) <= 1e-4

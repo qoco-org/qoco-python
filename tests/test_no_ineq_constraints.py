@@ -32,13 +32,6 @@ def test_linear_objective():
     # Solve problem.
     res = prob.solve()
 
-    prob.generate_solver("tests/", "qoco_custom_no_ineq")
-    codegen_solved, codegen_obj, average_runtime_ms = run_generated_solver(
-        "tests/qoco_custom_no_ineq"
-    )
-
     opt_obj = -2.700
     assert res.status == "QOCO_SOLVED"
     assert abs(res.obj - opt_obj) <= 1e-4
-    assert codegen_solved == 1
-    assert abs(codegen_obj - opt_obj) <= 1e-4

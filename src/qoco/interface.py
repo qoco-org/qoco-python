@@ -5,7 +5,6 @@ import importlib
 import numpy as np
 from scipy import sparse
 from types import SimpleNamespace
-from qoco.codegen import _generate_solver
 import time
 
 
@@ -142,31 +141,3 @@ class QOCO:
             status=self.solvecodes[self._solver.solution.status],
         )
         return results
-
-    def generate_solver(self, output_dir=".", name="qoco_custom", generate_ruiz=False):
-        start_time = time.time()
-        _generate_solver(
-            self.n,
-            self.m,
-            self.p,
-            self.Psp,
-            self.c,
-            self.Asp,
-            self.b,
-            self.Gsp,
-            self.h,
-            self.l,
-            self.nsoc,
-            self.q,
-            output_dir,
-            name,
-            generate_ruiz,
-        )
-        end_time = time.time()
-        elapsed_time = end_time - start_time
-        mins, secs = divmod(elapsed_time, 60)
-        if mins > 0:
-            formatted_time = f"{int(mins):03} mins {secs:06.3f} secs"
-        else:
-            formatted_time = f"{secs:06.3f} secs"
-        print(f"\nQOCO Custom Generation Time: {formatted_time}")
