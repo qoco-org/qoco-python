@@ -16,11 +16,23 @@ QOCOGEN is a code generator which takes in an second-order cone program problem 
 
 ## Installation and Usage
 
-You can install `qoco-python` by running `pip install qoco-python`.
+You can install `qoco-python` by running `pip install qoco`.
 
 For instructions on using the wrapper for QOCO, refer to [API](https://qoco-org.github.io/qoco/api/matlab.html#matlab-interface), and [simple example](https://qoco-org.github.io/qoco/examples/simple_example.html#simple-example) for an example of solving a simple SOCP with the python wrapper.
 
 For instructions on using QOCOGEN, refer to the [documentation](https://qoco-org.github.io/qoco/codegen/index.html).
+
+## Tests
+To run tests, first install cvxpy and pytest
+```bash
+pip install cvxpy pytest
+```
+
+and execute:
+
+```bash
+pytest
+```
 
 ## Bug reports
 
