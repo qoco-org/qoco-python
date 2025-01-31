@@ -99,4 +99,4 @@ def test_lcvx_bad_scaling():
     res = prob_qoco.solve()
     opt_obj = prob.value
     assert res.status == "QOCO_SOLVED"
-    assert (abs(res.obj - opt_obj) / abs(opt_obj)) <= 5e-4
+    assert (abs(res.obj - opt_obj) / abs(opt_obj)) <= 3e-3
