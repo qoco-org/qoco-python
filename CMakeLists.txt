@@ -11,6 +11,8 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     add_compile_definitions(IS_LINUX)
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
     add_compile_definitions(IS_MACOS)
+elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+  add_compile_definitions(IS_WINDOWS)
 endif()
 
 find_package(pybind11 REQUIRED)
@@ -21,7 +23,7 @@ include(FetchContent)
 FetchContent_Declare(
   qoco
   GIT_REPOSITORY https://github.com/qoco-org/qoco.git
-  GIT_TAG d2bbfc5d2d921242e4e94e4a2254d7adec3632b4
+  GIT_TAG 251303fbb62e4f225170051c2a5f18fcc14c808f
 )
 
 list(POP_BACK CMAKE_MESSAGE_INDENT)
