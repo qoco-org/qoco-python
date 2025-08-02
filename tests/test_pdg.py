@@ -44,8 +44,8 @@ def test_pdg():
 
     # Double integrator dynamics.
     Ad = np.block([[np.eye(3), dt * np.eye(3)], [np.zeros((3, 3)), np.eye(3)]])
-    Bd = np.block([[0.5 * dt**2 * np.eye(3)], [dt * np.eye(3)]])
-    g = np.array([-0.5 * g0 * dt**2, 0, 0, -g0 * dt, 0, 0])
+    Bd = np.block([[0.5 * dt ** 2 * np.eye(3)], [dt * np.eye(3)]])
+    g = np.array([-0.5 * g0 * dt ** 2, 0, 0, -g0 * dt, 0, 0])
 
     # Parse dynamics constraint.
     Azdyn = np.block(
