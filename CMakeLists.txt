@@ -29,6 +29,8 @@ FetchContent_Declare(
 list(POP_BACK CMAKE_MESSAGE_INDENT)
 FetchContent_MakeAvailable(qoco)
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/bindings.cpp.in
+               ${CMAKE_CURRENT_SOURCE_DIR}/src/bindings.cpp)
 pybind11_add_module(qoco_ext src/bindings.cpp)
 target_include_directories(qoco_ext INTERFACE ${qoco_SOURCE_DIR}/include)
 

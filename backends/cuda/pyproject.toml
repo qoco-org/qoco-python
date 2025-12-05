@@ -16,8 +16,8 @@ install.components = ["python"]
 wheel.install-dir = "qoco"
 
 [tool.scikit-build.cmake.define]
-QOCO_ALGEBRA_BACKEND = "builtin"
-QOCO_EXT_MODULE_NAME = "qoco_ext"
+QOCO_ALGEBRA_BACKEND = "cuda"
+QOCO_EXT_MODULE_NAME = "qoco_cuda"
 
 [project.urls]
 Homepage = "https://github.com/qoco-org/qoco"
