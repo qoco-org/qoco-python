@@ -12,26 +12,7 @@ on:
   pull_request:
     branches: [main]
 
-  # Manual trigger for pushing to PyPI
-  workflow_dispatch:
-    inputs:
-      deploy:
-        description: "Upload wheels & sdist to PyPI?"
-        required: true
-        type: boolean
-        default: false
-
 jobs:
-  build_sdist:
-    name: Build source
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-    steps:
-      - uses: actions/checkout@master
-        with:
-          submodules: "recursive"
-
   build_wheels:
     name: Building wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -45,6 +26,9 @@ jobs:
         with:
           fetch-depth: 0
           submodules: true
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
 
       - uses: pypa/cibuildwheel@v2.21
         env:
