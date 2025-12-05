@@ -93,7 +93,8 @@ jobs:
   publish-qoco-to-testpypi:
     name: Publish QOCO Wheels to TestPyPI
     needs:
-    - build
+    - build_sdist
+    - build_wheels
     runs-on: ubuntu-latest
 
     environment:
