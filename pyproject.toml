@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "qoco"
-version = "0.1.7"
+version = "0.2.0"
 description = "QOCO: Quadratic Objective Conic Optimizer"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -14,6 +14,9 @@ dependencies = ["jinja2", "numpy>=1.7", "qdldl", "scipy>=0.13.2", "setuptools"]
 [tool.scikit-build]
 install.components = ["python"]
 wheel.install-dir = "qoco"
+
+[tool.scikit-build.cmake.define]
+QOCO_ALGEBRA_BACKEND = "cuda"
 
 [project.urls]
 Homepage = "https://github.com/qoco-org/qoco"
