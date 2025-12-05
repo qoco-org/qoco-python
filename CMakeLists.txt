@@ -31,15 +31,14 @@ FetchContent_MakeAvailable(qoco)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/bindings.cpp.in
                ${CMAKE_CURRENT_SOURCE_DIR}/src/bindings.cpp)
-pybind11_add_module(qoco_ext src/bindings.cpp)
-target_include_directories(qoco_ext INTERFACE ${qoco_SOURCE_DIR}/include)
+pybind11_add_module(${QOCO_EXT_MODULE_NAME} src/bindings.cpp)
+target_include_directories(${QOCO_EXT_MODULE_NAME} INTERFACE ${qoco_SOURCE_DIR}/include)
+install(TARGETS ${QOCO_EXT_MODULE_NAME} DESTINATION . COMPONENT python)
 
 if(${QOCO_ALGEBRA_BACKEND} STREQUAL "builtin")
 target_link_libraries(qoco_ext PUBLIC pybind11::module qocostatic)
 elseif(${QOCO_ALGEBRA_BACKEND} STREQUAL "cuda")
     enable_language(CUDA)
     find_package(CUDA)
-    target_link_libraries(qoco_ext PUBLIC pybind11::module qocostatic cudart)
+    target_link_libraries(qoco_cuda PUBLIC pybind11::module qocostatic cudart)
 endif()
-
-install(TARGETS qoco_ext DESTINATION . COMPONENT python)

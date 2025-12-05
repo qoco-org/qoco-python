@@ -3,17 +3,16 @@ requires = ["scikit-build-core", "pybind11"]
 build-backend = "scikit_build_core.build"
 
 [project]
-name = "qoco"
-version = "0.2.0"
+name = "qoco-cuda"
+version = "0.1.0"
 description = "QOCO: Quadratic Objective Conic Optimizer"
-readme = "README.md"
 requires-python = ">=3.8"
 authors = [{ name = "Govind M. Chari", email = "govindchari1@gmail.com" }]
-dependencies = ["jinja2", "numpy>=1.7", "qdldl", "scipy>=0.13.2", "setuptools"]
+dependencies = ["numpy>=1.7", "scipy>=0.13.2", "setuptools", "qoco>=0.2.0"]
 
 [tool.scikit-build]
 install.components = ["python"]
-wheel.install-dir = "qoco"
+cmake.source-dir = "../.."
 
 [tool.scikit-build.cmake.define]
 QOCO_ALGEBRA_BACKEND = "cuda"
@@ -22,3 +21,6 @@ QOCO_EXT_MODULE_NAME = "qoco_cuda"
 [project.urls]
 Homepage = "https://github.com/qoco-org/qoco"
 Issues = "https://github.com/qoco-org/qoco/issues"
+
+[tool.setuptools_scm]
+root = "../.."
