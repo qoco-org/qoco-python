@@ -4,6 +4,11 @@ name: Build Wheels
 
 on:
   workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to run on"
+        required: true
+        default: "main"
 
 jobs:
   build_sdist:
@@ -12,8 +17,9 @@ jobs:
     strategy:
       fail-fast: false
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.inputs.branch }}
           submodules: "recursive"
 
       - name: Build source and wheel
