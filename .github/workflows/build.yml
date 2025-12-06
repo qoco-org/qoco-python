@@ -28,6 +28,13 @@ jobs:
           python -m pip install build
           python -m build --sdist -o wheelhouse
 
+      - name: Upload sdist to github
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-sdist
+          path: wheelhouse/*
+          if-no-files-found: error
+
   build_wheels:
     name: Building wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -81,6 +88,7 @@ jobs:
     name: Publish QOCO Wheels to TestPyPI
     needs:
     - build_wheels
+    - build_sdist
     runs-on: ubuntu-latest
 
     environment:
