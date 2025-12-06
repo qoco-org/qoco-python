@@ -3,14 +3,7 @@
 name: Build Wheels
 
 on:
-  # Triggers the workflow on push or pull request events
-  push:
-    branches:
-      - "*"
-      - "*/*"
-      - "**"
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   build_sdist:
