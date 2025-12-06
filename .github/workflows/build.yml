@@ -99,9 +99,11 @@ jobs:
       id-token: write
 
     steps:
-    - name: Download all the wheels
+    - name: Download all wheels
       uses: actions/download-artifact@v6
       with:
+        pattern: wheelhouse-*
+        merge-multiple: true
         path: wheelhouse
     - name: Publish distribution to TestPyPI
       uses: pypa/gh-action-pypi-publish@release/v1
