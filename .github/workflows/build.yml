@@ -31,7 +31,7 @@ jobs:
       - name: Upload sdist to github
         uses: actions/upload-artifact@v4
         with:
-          name: wheels-sdist
+          name: wheelhouse-sdist
           path: wheelhouse/*
           if-no-files-found: error
 
@@ -76,12 +76,17 @@ jobs:
   #   permissions:
   #     id-token: write
   #   steps:
-  #   - name: Download all the dists
+  #   - name: Download all wheels
   #     uses: actions/download-artifact@v6
   #     with:
-  #       name: python-package-distributions
-  #       path: dist/
-  #   - name: Publish distribution 📦 to PyPI
+  #       pattern: wheelhouse-*
+  #       merge-multiple: true
+  #       path: wheelhouse
+  #   - name: Move wheels into dist directory
+  #     run: |
+  #       mkdir -p dist
+  #       cp wheelhouse/* dist/
+  #   - name: Publish distribution to PyPI
   #     uses: pypa/gh-action-pypi-publish@release/v1
 
   publish-qoco-to-testpypi:
