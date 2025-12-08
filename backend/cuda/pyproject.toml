@@ -12,7 +12,6 @@ dependencies = ["numpy>=1.7", "scipy>=0.13.2", "setuptools", "qoco>=0.2.0"]
 
 [tool.scikit-build]
 install.components = ["python"]
-cmake.source-dir = "../.."
 
 [tool.scikit-build.cmake.define]
 QOCO_ALGEBRA_BACKEND = "cuda"
@@ -21,6 +20,3 @@ QOCO_EXT_MODULE_NAME = "qoco_cuda"
 [project.urls]
 Homepage = "https://github.com/qoco-org/qoco"
 Issues = "https://github.com/qoco-org/qoco/issues"
-
-[tool.setuptools_scm]
-root = "../.."
