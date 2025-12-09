@@ -23,7 +23,7 @@ include(FetchContent)
 FetchContent_Declare(
   qoco
   GIT_REPOSITORY https://github.com/qoco-org/qoco.git
-  GIT_TAG b38e6dd0755508fae98a1fd1ed5cbdb283c5f157
+  GIT_TAG b058d60aa48ef7015a9f86e67dc99ad2d15a1172
 )
 
 list(POP_BACK CMAKE_MESSAGE_INDENT)
@@ -40,5 +40,5 @@ target_link_libraries(qoco_ext PUBLIC pybind11::module qocostatic)
 elseif(${QOCO_ALGEBRA_BACKEND} STREQUAL "cuda")
     enable_language(CUDA)
     find_package(CUDA)
-    target_link_libraries(qoco_cuda PUBLIC pybind11::module qocostatic cudart)
+    target_link_libraries(qoco_cuda PUBLIC pybind11::module qocostatic)
 endif()
