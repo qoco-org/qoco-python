@@ -241,7 +241,7 @@ QOCOInt PyQOCOSolver::update_settings(const QOCOSettings &new_settings)
     return qoco_update_settings(this->_solver, &new_settings);
 }
 
-PYBIND11_MODULE(qoco_ext, m)
+PYBIND11_MODULE(@QOCO_EXT_MODULE_NAME@, m)
 {
     // Enums.
     py::enum_<qoco_solve_status>(m, "qoco_solve_status", py::module_local())

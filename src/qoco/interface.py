@@ -5,7 +5,32 @@ import importlib
 import numpy as np
 from scipy import sparse
 from types import SimpleNamespace
-import time
+
+ALGEBRAS = (
+    "cuda",
+    "builtin",
+)
+
+ALGEBRA_MODULES = {
+    "cuda": "qoco_cuda",
+    "builtin": "qoco.qoco_ext",
+}
+
+
+def algebra_available(algebra):
+    assert algebra in ALGEBRAS, f"Unknown algebra {algebra}"
+    module = ALGEBRA_MODULES[algebra]
+
+    try:
+        importlib.import_module(module)
+    except ImportError:
+        return False
+    else:
+        return True
+
+
+def algebras_available():
+    return [algebra for algebra in ALGEBRAS if algebra_available(algebra)]
 
 
 class QOCO:
@@ -41,7 +66,10 @@ class QOCO:
             "QOCO_MAX_ITER",
         ]
 
-        self.ext = importlib.import_module("qoco.qoco_ext")
+        self.algebra = kwargs.pop("algebra") if "algebra" in kwargs else "builtin"
+        if not algebra_available(self.algebra):
+            raise RuntimeError(f"Algebra {self.algebra} not available")
+        self.ext = importlib.import_module(ALGEBRA_MODULES[self.algebra])
         self._solver = None
 
     def update_settings(self, **kwargs):

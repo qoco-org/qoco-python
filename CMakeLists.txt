@@ -23,13 +23,22 @@ include(FetchContent)
 FetchContent_Declare(
   qoco
   GIT_REPOSITORY https://github.com/qoco-org/qoco.git
-  GIT_TAG bbab0db3899f19331c5c8e9d31d68bbbb68704ae
+  GIT_TAG d40cb8170b0e967be38ad0e1b134d9c51f5d636e
 )
 
 list(POP_BACK CMAKE_MESSAGE_INDENT)
 FetchContent_MakeAvailable(qoco)
 
-pybind11_add_module(qoco_ext src/bindings.cpp)
-target_include_directories(qoco_ext INTERFACE ${qoco_SOURCE_DIR}/include)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/bindings.cpp.in
+               ${CMAKE_CURRENT_SOURCE_DIR}/src/bindings.cpp)
+pybind11_add_module(${QOCO_EXT_MODULE_NAME} src/bindings.cpp)
+target_include_directories(${QOCO_EXT_MODULE_NAME} INTERFACE ${qoco_SOURCE_DIR}/include)
+install(TARGETS ${QOCO_EXT_MODULE_NAME} DESTINATION . COMPONENT python)
+
+if(${QOCO_ALGEBRA_BACKEND} STREQUAL "builtin")
 target_link_libraries(qoco_ext PUBLIC pybind11::module qocostatic)
-install(TARGETS qoco_ext DESTINATION . COMPONENT python)
+elseif(${QOCO_ALGEBRA_BACKEND} STREQUAL "cuda")
+    enable_language(CUDA)
+    find_package(CUDA)
+    target_link_libraries(qoco_cuda PUBLIC pybind11::module qocostatic)
+endif()

@@ -1,0 +1,4 @@
+[tool.cibuildwheel.linux]
+skip = ["*-musllinux*"]
+manylinux-x86_64-image = "mycuda-manylinux:latest"
+environment = { CUDAToolkit_ROOT = "/usr/local/cuda/bin" }

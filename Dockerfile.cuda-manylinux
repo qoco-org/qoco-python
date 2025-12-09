@@ -1,0 +1,19 @@
+# Base manylinux image with Python interpreters
+FROM quay.io/pypa/manylinux_2_28_x86_64:2025.11.09-2
+
+# Install prerequisites
+RUN yum install -y wget tar bzip2 xz gzip make gcc gcc-c++ git
+
+# Install CUDA Toolkit 13.1 and cuDSS 0.7.1
+RUN wget https://developer.download.nvidia.com/compute/cuda/13.0.0/local_installers/cuda_13.0.0_580.65.06_linux.run && \
+    sh cuda_13.0.0_580.65.06_linux.run --silent --toolkit && \
+    rm cuda_13.0.0_580.65.06_linux.run && \
+    curl -O https://developer.download.nvidia.com/compute/cudss/0.7.1/local_installers/cudss-local-repo-rhel10-0.7.1-0.7.1-1.x86_64.rpm && \
+    rpm -i cudss-local-repo-rhel10-0.7.1-0.7.1-1.x86_64.rpm && \
+    dnf clean all && \
+    dnf -y install cudss
+
+# Set CUDA environment variables
+ENV PATH=/usr/local/cuda/bin:$PATH
+ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+ENV CUDAToolkit_ROOT=/usr/local/cuda/bin

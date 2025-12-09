@@ -3,3 +3,5 @@ build/
 .vscode/
 __pycache__/
 qoco_custom*/
+src/bindings.cpp
+dist/
