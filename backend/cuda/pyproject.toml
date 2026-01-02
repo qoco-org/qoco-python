@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "qoco-cuda"
-version = "0.1.1"
+version = "0.1.2"
 description = "QOCO: Quadratic Objective Conic Optimizer"
 requires-python = ">=3.8"
 authors = [{ name = "Govind M. Chari", email = "govindchari1@gmail.com" }]
