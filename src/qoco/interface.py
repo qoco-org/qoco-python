@@ -86,6 +86,101 @@ class QOCO:
         if settings_changed and self._solver is not None:
             self._solver.update_settings(self.settings)
 
+    def update_vector_data(self, c=None, b=None, h=None):
+        """
+        Update data vectors.
+        
+        Parameters
+        ----------
+        c : np.ndarray, optional
+            New c vector of size n. If None, c is not updated. Default is None.
+        b : np.ndarray, optional
+            New b vector of size p. If None, b is not updated. Default is None.
+        h : np.ndarray, optional
+            New h vector of size m. If None, h is not updated. Default is None.
+        
+        Returns
+        -------
+        int
+            Status code from the solver
+        """
+        cnew_ptr = None
+        bnew_ptr = None
+        hnew_ptr = None
+        
+        if c is not None:
+            if not isinstance(c, np.ndarray):
+                c = np.array(c)
+            c = c.astype(np.float64)
+            if c.shape[0] != self.n:
+                raise ValueError(f"c size must be n = {self.n}")
+            cnew_ptr = c
+        
+        if b is not None:
+            if not isinstance(b, np.ndarray):
+                b = np.array(b)
+            b = b.astype(np.float64)
+            if b.shape[0] != self.p:
+                raise ValueError(f"b size must be p = {self.p}")
+            bnew_ptr = b
+        
+        if h is not None:
+            if not isinstance(h, np.ndarray):
+                h = np.array(h)
+            h = h.astype(np.float64)
+            if h.shape[0] != self.m:
+                raise ValueError(f"h size must be m = {self.m}")
+            hnew_ptr = h
+        
+        return self._solver.update_vector_data(cnew_ptr, bnew_ptr, hnew_ptr)
+
+    def update_matrix_data(self, P=None, A=None, G=None):
+        """
+        Update sparse matrix data.
+        
+        The new matrices must have the same sparsity structure as the original ones.
+        
+        Parameters
+        ----------
+        P : np.ndarray, optional
+            New data for P matrix (only the nonzero values). If None, P is not updated. 
+            Default is None.
+        A : np.ndarray, optional
+            New data for A matrix (only the nonzero values). If None, A is not updated.
+            Default is None.
+        G : np.ndarray, optional
+            New data for G matrix (only the nonzero values). If None, G is not updated.
+            Default is None.
+        
+        Returns
+        -------
+        int
+            Status code from the solver
+        """
+        Pxnew_ptr = None
+        Axnew_ptr = None
+        Gxnew_ptr = None
+        
+        if P is not None:
+            if not isinstance(P, np.ndarray):
+                P = np.array(P)
+            P = P.astype(np.float64)
+            Pxnew_ptr = P
+        
+        if A is not None:
+            if not isinstance(A, np.ndarray):
+                A = np.array(A)
+            A = A.astype(np.float64)
+            Axnew_ptr = A
+        
+        if G is not None:
+            if not isinstance(G, np.ndarray):
+                G = np.array(G)
+            G = G.astype(np.float64)
+            Gxnew_ptr = G
+        
+        return self._solver.update_matrix_data(Pxnew_ptr, Axnew_ptr, Gxnew_ptr)
+
     def setup(self, n, m, p, P, c, A, b, G, h, l, nsoc, q, **settings):
         self.m = m
         self.n = n
