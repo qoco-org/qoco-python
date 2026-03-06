@@ -98,11 +98,6 @@ class QOCO:
             New b vector of size p. If None, b is not updated. Default is None.
         h : np.ndarray, optional
             New h vector of size m. If None, h is not updated. Default is None.
-        
-        Returns
-        -------
-        int
-            Status code from the solver
         """
         cnew_ptr = None
         bnew_ptr = None
@@ -151,11 +146,6 @@ class QOCO:
         G : np.ndarray, optional
             New data for G matrix (only the nonzero values). If None, G is not updated.
             Default is None.
-        
-        Returns
-        -------
-        int
-            Status code from the solver
         """
         Pxnew_ptr = None
         Axnew_ptr = None

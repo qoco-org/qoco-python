@@ -139,11 +139,9 @@ public:
     QOCOSettings *get_settings();
     PyQOCOSolution &get_solution();
 
-    QOCOInt update_settings(const QOCOSettings &);
-    //QOCOInt update_vector_data(py::object, py::object, py::object);
-    //QOCOInt update_matrix_data(py::object, py::object, py::object);
-    QOCOInt update_vector_data(py::object cnew, py::object bnew, py::object hnew);
-    QOCOInt update_matrix_data(py::object Pxnew, py::object Axnew, py::object Gxnew);
+    QOCOInt update_settings(const QOCOSettings &new_settings);
+    void update_vector_data(py::object cnew, py::object bnew, py::object hnew);
+    void update_matrix_data(py::object Pxnew, py::object Axnew, py::object Gxnew);
 
     QOCOInt solve();
 
@@ -243,7 +241,7 @@ QOCOInt PyQOCOSolver::update_settings(const QOCOSettings &new_settings)
     return qoco_update_settings(this->_solver, &new_settings);
 }
 
-QOCOInt PyQOCOSolver::update_vector_data(py::object cnew, py::object bnew, py::object hnew)
+void PyQOCOSolver::update_vector_data(py::object cnew, py::object bnew, py::object hnew)
 {
     QOCOFloat *cnew_ptr = nullptr;
     QOCOFloat *bnew_ptr = nullptr;
@@ -279,7 +277,7 @@ QOCOInt PyQOCOSolver::update_vector_data(py::object cnew, py::object bnew, py::o
     return qoco_update_vector_data(this->_solver, cnew_ptr, bnew_ptr, hnew_ptr);
 }
 
-QOCOInt PyQOCOSolver::update_matrix_data(py::object Pxnew, py::object Axnew, py::object Gxnew)
+void PyQOCOSolver::update_matrix_data(py::object Pxnew, py::object Axnew, py::object Gxnew)
 {
     QOCOFloat *Pxnew_ptr = nullptr;
     QOCOFloat *Axnew_ptr = nullptr;
