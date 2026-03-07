@@ -207,3 +207,19 @@ def test_update_vector_data_float_conversion(setup_qoco):
     prob.update_vector_data(c=c_int, b=b_int, h=h_int)
     res = prob.solve()
     assert res.status in ["QOCO_SOLVED", "QOCO_SOLVED_INACCURATE"]
+
+def test_update_matrix_data_invalid_size(setup_qoco):
+    """Test that updating with wrong size matrix data raises error."""
+    prob = setup_qoco
+
+    # Test P with wrong size
+    with pytest.raises(ValueError, match="P size must be"):
+        prob.update_matrix_data(P=np.array([1, 2, 3]))
+
+    # Test A with wrong size
+    with pytest.raises(ValueError, match="A size must be"):
+        prob.update_matrix_data(A=np.array([1, 2]))
+
+    # Test G with wrong size
+    with pytest.raises(ValueError, match="G size must be"):
+        prob.update_matrix_data(G=np.array([1, 2]))

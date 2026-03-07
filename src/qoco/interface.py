@@ -144,16 +144,22 @@ class QOCO:
             if not isinstance(P, np.ndarray):
                 P = np.array(P)
             P = P.astype(np.float64)
+            if P.shape[0] != self.P.nnz:
+                raise ValueError(f"P size must be {self.P.nnz}")
         
         if A is not None:
             if not isinstance(A, np.ndarray):
                 A = np.array(A)
             A = A.astype(np.float64)
+            if A.shape[0] != self.A.nnz:
+                raise ValueError(f"A size must be {self.A.nnz}")
         
         if G is not None:
             if not isinstance(G, np.ndarray):
                 G = np.array(G)
             G = G.astype(np.float64)
+            if G.shape[0] != self.G.nnz:
+                raise ValueError(f"G size must be {self.G.nnz}")
         
         return self._solver.update_matrix_data(P, A, G)
 
