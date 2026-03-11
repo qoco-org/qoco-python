@@ -56,6 +56,15 @@ jobs:
             ~/Library/Caches/cibuildwheel
           key: cibuildwheel-${{ runner.os }}
 
+      - name: Pre-download virtualenv
+        run: |
+          mkdir -p ~/Library/Caches/cibuildwheel
+          curl -L -H "Authorization: Bearer $GITHUB_TOKEN" \
+            https://github.com/pypa/get-virtualenv/raw/20.26.6/public/virtualenv.pyz \
+            -o ~/Library/Caches/cibuildwheel/virtualenv-20.26.6.pyz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.21
         env:
