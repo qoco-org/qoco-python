@@ -1,9 +1,6 @@
-# Taken from osqp-python
-
 name: Build Wheels
 
 on:
-  # Triggers the workflow on push or pull request events
   push:
     branches:
       - "*"
@@ -18,14 +15,15 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v4
         with:
-          submodules: "recursive"
+          submodules: recursive
 
       - name: Build source and wheel
         run: |
-          python -m pip install build
+          python -m pip install --upgrade pip build
           python -m build --outdir=wheelhouse
 
       - name: Upload sdist and wheel to github
@@ -38,6 +36,7 @@ jobs:
   build_wheels:
     name: Building wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+
     strategy:
       fail-fast: false
       matrix:
@@ -49,9 +48,45 @@ jobs:
           fetch-depth: 0
           submodules: true
 
-      - uses: pypa/cibuildwheel@v2.21
+      - name: Cache cibuildwheel
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/cibuildwheel
+            ~/Library/Caches/cibuildwheel
+            C:\Users\runneradmin\AppData\Local\pypa\cibuildwheel\Cache
+          key: cibuildwheel-${{ runner.os }}
+
+      # Pre-download virtualenv for macOS
+      - name: Pre-download virtualenv (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p ~/Library/Caches/cibuildwheel
+          curl -L -H "Authorization: Bearer $GITHUB_TOKEN" \
+            https://github.com/pypa/get-virtualenv/raw/20.26.6/public/virtualenv.pyz \
+            -o ~/Library/Caches/cibuildwheel/virtualenv-20.26.6.pyz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Pre-download virtualenv for Windows
+      - name: Pre-download virtualenv (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $cache = "$env:LOCALAPPDATA\pypa\cibuildwheel\Cache"
+          New-Item -ItemType Directory -Force -Path $cache
+          Invoke-WebRequest `
+            -Headers @{Authorization="Bearer $env:GITHUB_TOKEN"} `
+            -Uri "https://github.com/pypa/get-virtualenv/raw/20.26.6/public/virtualenv.pyz" `
+            -OutFile "$cache\virtualenv-20.26.6.pyz"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.21
         env:
           CIBW_SKIP: "pp38-*"
+          CIBW_BUILD_VERBOSITY: 1
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
