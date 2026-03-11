@@ -4,16 +4,14 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "qoco"
-version = "0.2.3"
+version = "0.2.4"
 description = "QOCO: Quadratic Objective Conic Optimizer"
 readme = "README.md"
 requires-python = ">=3.8"
 authors = [{ name = "Govind M. Chari", email = "govindchari1@gmail.com" }]
 dependencies = ["numpy>=1.7", "scipy>=0.13.2", "setuptools"]
 [project.optional-dependencies]
-cuda = [
-    "qoco-cuda",
-]
+cuda = ["qoco-cuda"]
 
 [tool.scikit-build]
 install.components = ["python"]
