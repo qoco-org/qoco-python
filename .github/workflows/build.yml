@@ -54,23 +54,17 @@ jobs:
           path: |
             ~/.cache/cibuildwheel
             ~/Library/Caches/cibuildwheel
+            C:\Users\runneradmin\AppData\Local\pypa\cibuildwheel\Cache
           key: cibuildwheel-${{ runner.os }}
 
-      - name: Pre-download virtualenv
-        run: |
-          mkdir -p ~/Library/Caches/cibuildwheel
-          curl -L -H "Authorization: Bearer $GITHUB_TOKEN" \
-            https://github.com/pypa/get-virtualenv/raw/20.26.6/public/virtualenv.pyz \
-            -o ~/Library/Caches/cibuildwheel/virtualenv-20.26.6.pyz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install virtualenv
+        run: python -m pip install virtualenv
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.21
         env:
           CIBW_SKIP: "pp38-*"
           CIBW_BUILD_VERBOSITY: 1
-
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
