@@ -139,9 +139,9 @@ public:
     QOCOSettings *get_settings();
     PyQOCOSolution &get_solution();
 
-    QOCOInt update_settings(const QOCOSettings &);
-    // QOCOInt update_vector_data(py::object, py::object, py::object);
-    // QOCOInt update_matrix_data(py::object, py::object, py::object);
+    QOCOInt update_settings(const QOCOSettings &new_settings);
+    void update_vector_data(py::object cnew, py::object bnew, py::object hnew);
+    void update_matrix_data(py::object Pxnew, py::object Axnew, py::object Gxnew);
 
     QOCOInt solve();
 
@@ -241,6 +241,78 @@ QOCOInt PyQOCOSolver::update_settings(const QOCOSettings &new_settings)
     return qoco_update_settings(this->_solver, &new_settings);
 }
 
+void PyQOCOSolver::update_vector_data(py::object cnew, py::object bnew, py::object hnew)
+{
+    QOCOFloat *cnew_ptr = nullptr;
+    QOCOFloat *bnew_ptr = nullptr;
+    QOCOFloat *hnew_ptr = nullptr;
+    
+    if (cnew != py::none())
+    {
+        auto cnew_arr = cnew.cast<py::array_t<QOCOFloat>>();
+        auto buf = cnew_arr.request();
+        if (buf.shape[0] != this->n)
+            throw std::runtime_error("cnew size must be n = " + std::to_string(this->n));
+        cnew_ptr = (QOCOFloat *)buf.ptr;
+    }
+    
+    if (bnew != py::none())
+    {
+        auto bnew_arr = bnew.cast<py::array_t<QOCOFloat>>();
+        auto buf = bnew_arr.request();
+        if (buf.shape[0] != this->p)
+            throw std::runtime_error("bnew size must be p = " + std::to_string(this->p));
+        bnew_ptr = (QOCOFloat *)buf.ptr;
+    }
+    
+    if (hnew != py::none())
+    {
+        auto hnew_arr = hnew.cast<py::array_t<QOCOFloat>>();
+        auto buf = hnew_arr.request();
+        if (buf.shape[0] != this->m)
+            throw std::runtime_error("hnew size must be m = " + std::to_string(this->m));
+        hnew_ptr = (QOCOFloat *)buf.ptr;
+    }
+    
+    qoco_update_vector_data(this->_solver, cnew_ptr, bnew_ptr, hnew_ptr);
+}
+
+void PyQOCOSolver::update_matrix_data(py::object Pxnew, py::object Axnew, py::object Gxnew)
+{
+    QOCOFloat *Pxnew_ptr = nullptr;
+    QOCOFloat *Axnew_ptr = nullptr;
+    QOCOFloat *Gxnew_ptr = nullptr;
+    
+    if (Pxnew != py::none())
+    {
+        auto Pxnew_arr = Pxnew.cast<py::array_t<QOCOFloat>>();
+        auto buf = Pxnew_arr.request();
+        if (buf.ndim != 1)
+            throw std::runtime_error("Pxnew must be 1-D array");
+        Pxnew_ptr = (QOCOFloat *)buf.ptr;
+    }
+    
+    if (Axnew != py::none())
+    {
+        auto Axnew_arr = Axnew.cast<py::array_t<QOCOFloat>>();
+        auto buf = Axnew_arr.request();
+        if (buf.ndim != 1)
+            throw std::runtime_error("Axnew must be 1-D array");
+        Axnew_ptr = (QOCOFloat *)buf.ptr;
+    }
+    
+    if (Gxnew != py::none())
+    {
+        auto Gxnew_arr = Gxnew.cast<py::array_t<QOCOFloat>>();
+        auto buf = Gxnew_arr.request();
+        if (buf.ndim != 1)
+            throw std::runtime_error("Gxnew must be 1-D array");
+        Gxnew_ptr = (QOCOFloat *)buf.ptr;
+    }
+    
+    qoco_update_matrix_data(this->_solver, Pxnew_ptr, Axnew_ptr, Gxnew_ptr);
+}
+
 PYBIND11_MODULE(@QOCO_EXT_MODULE_NAME@, m)
 {
     // Enums.
@@ -308,6 +380,8 @@ PYBIND11_MODULE(@QOCO_EXT_MODULE_NAME@, m)
         .def(py::init<QOCOInt, QOCOInt, QOCOInt, const CSC &, const py::array_t<QOCOFloat>, const CSC &, const py::array_t<QOCOFloat>, const CSC &, const py::array_t<QOCOFloat>, QOCOInt, QOCOInt, const py::array_t<QOCOInt>, QOCOSettings *>(), "n"_a, "m"_a, "p"_a, "P"_a, "c"_a.noconvert(), "A"_a, "b"_a.noconvert(), "G"_a, "h"_a.noconvert(), "l"_a, "nsoc"_a, "q"_a.noconvert(), "settings"_a)
         .def_property_readonly("solution", &PyQOCOSolver::get_solution, py::return_value_policy::reference)
         .def("update_settings", &PyQOCOSolver::update_settings)
+        .def("update_vector_data", &PyQOCOSolver::update_vector_data, "cnew"_a=py::none(), "bnew"_a=py::none(), "hnew"_a=py::none())
+        .def("update_matrix_data", &PyQOCOSolver::update_matrix_data, "Pxnew"_a=py::none(), "Axnew"_a=py::none(), "Gxnew"_a=py::none())
         .def("solve", &PyQOCOSolver::solve)
         .def("get_settings", &PyQOCOSolver::get_settings, py::return_value_policy::reference);
 }
