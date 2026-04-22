@@ -346,7 +346,9 @@ PYBIND11_MODULE(@QOCO_EXT_MODULE_NAME@, m)
         .def_readwrite("reltol", &QOCOSettings::reltol)
         .def_readwrite("abstol_inacc", &QOCOSettings::abstol_inacc)
         .def_readwrite("reltol_inacc", &QOCOSettings::reltol_inacc)
-        .def_readwrite("kkt_static_reg", &QOCOSettings::kkt_static_reg)
+        .def_readwrite("kkt_static_reg_P", &QOCOSettings::kkt_static_reg_P)
+        .def_readwrite("kkt_static_reg_A", &QOCOSettings::kkt_static_reg_A)
+        .def_readwrite("kkt_static_reg_G", &QOCOSettings::kkt_static_reg_G)
         .def_readwrite("kkt_dynamic_reg", &QOCOSettings::kkt_dynamic_reg)
         .def_readwrite("verbose", &QOCOSettings::verbose);
 
