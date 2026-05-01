@@ -92,7 +92,7 @@ def test_lcvx_bad_scaling():
     prob_qoco = qoco.QOCO()
 
     prob_qoco.setup(
-        n, m, p, P, c, A, b, G, h, l, nsoc, q, ruiz_iters=5, iter_ref_iters=3
+        n, m, p, P, c, A, b, G, h, l, nsoc, q, ruiz_iters=5, max_ir_iters=3
     )
 
     # Solve problem.
