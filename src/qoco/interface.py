@@ -237,6 +237,7 @@ class QOCO:
             y=self._solver.solution.y,
             z=self._solver.solution.z,
             iters=self._solver.solution.iters,
+            ir_iters=self._solver.solution.ir_iters,
             setup_time_sec=self._solver.solution.setup_time_sec,
             solve_time_sec=self._solver.solution.solve_time_sec,
             obj=self._solver.solution.obj,
