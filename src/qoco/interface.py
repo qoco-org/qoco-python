@@ -2,6 +2,7 @@
 # This source code is licensed under the BSD 3-Clause License
 
 import importlib
+import os
 import numpy as np
 from scipy import sparse
 from types import SimpleNamespace
@@ -163,7 +164,33 @@ class QOCO:
         
         return self._solver.update_matrix_data(P, A, G)
 
+    def _dump(self, filename):
+        Psc = sparse.triu(self.Psp, format="csc") if self.Psp is not None else sparse.csc_matrix((self.n, self.n))
+        Asc = self.Asp.tocsc() if self.Asp is not None else sparse.csc_matrix((self.p, self.n))
+        Gsc = self.Gsp.tocsc() if self.Gsp is not None else sparse.csc_matrix((self.m, self.n))
+
+        dirname = os.path.dirname(filename)
+        if dirname:
+            os.makedirs(dirname, exist_ok=True)
+
+        with open(filename, "wb") as f:
+            np.array([self.n, self.m, self.p, self.l, self.nsoc, Psc.nnz, Asc.nnz, Gsc.nnz], dtype=np.int32).tofile(f)
+            self.c.tofile(f)
+            self.b.tofile(f)
+            self.h.tofile(f)
+            self.q.tofile(f)
+
+            def dump_csc(M):
+                M.data.astype(np.float64).tofile(f)
+                M.indices.astype(np.int32).tofile(f)
+                M.indptr.astype(np.int32).tofile(f)
+
+            dump_csc(Psc)
+            dump_csc(Asc)
+            dump_csc(Gsc)
+
     def setup(self, n, m, p, P, c, A, b, G, h, l, nsoc, q, **settings):
+        dump_problem = settings.pop("dump_problem", None)
         self.m = m
         self.n = n
         self.p = p
@@ -227,6 +254,9 @@ class QOCO:
             self.q,
             self.settings,
         )
+
+        if dump_problem:
+            self._dump(dump_problem if isinstance(dump_problem, str) else "problem.bin")
 
     def solve(self):
         self._solver.solve()
