@@ -23,7 +23,7 @@ include(FetchContent)
 FetchContent_Declare(
   qoco
   GIT_REPOSITORY https://github.com/qoco-org/qoco.git
-  GIT_TAG 129e942a566f5cc8c4aea9644d91205f4ef150a6
+  GIT_TAG fae2acf6801b762be9b4e0a2613e4f7665acb316
 )
 
 list(POP_BACK CMAKE_MESSAGE_INDENT)
