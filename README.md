@@ -37,6 +37,8 @@ pytest
 File any issues or bug reports using the [issue tracker](https://github.com/qoco-org/qoco-python/issues).
 
 ## Citing
+If you find QOCO useful please cite the [QOCO paper](https://arxiv.org/abs/2503.12658) as follows
+
 ```
 @article{chari2026qoco,
   title = {{QOCO}: a quadratic objective conic optimizer with custom solver generation},
@@ -48,6 +50,22 @@ File any issues or bug reports using the [issue tracker](https://github.com/qoco
   publisher = {Springer Science and Business Media LLC},
   year = {2026},
   month = mar,
+}
+```
+
+If you find the GPU backend useful please cite the [QOCO-GPU](https://arxiv.org/abs/2603.29197) paper as follows
+
+```
+@article{chari2026qocogpu,
+  title       = {{QOCO}-{GPU}: A Quadratic Objective Conic Optimizer with {GPU} Acceleration},
+  issn        = {1867-2957},
+  url         = {http://dx.doi.org/10.1007/s12532-026-00338-x},
+  doi         = {10.1007/s12532-026-00338-x},
+  journal     = {Mathematical Programming Computation},
+  publisher   = {Springer Science and Business Media LLC},
+  author      = {Chari,  Govind M. and A\c{c}ıkmeşe,  Beh\c{c}et},
+  year        = {2026},
+  month       = Sept
 }
 ```
 
